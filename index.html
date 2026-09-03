@@ -1,1129 +1,1793 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Inverkev - Sistema Avanzado de Crédito y Cobranza">
-  <title>Inverkev - Gestión de Préstamos</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NSIgc3Ryb2tlPSIjMzhiZGY4IiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxMCIgZmlsbD0iIzM4YmRmOCIvPjwvc3ZnPg==">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    /* ====== ESTILOS (iguales a los tuyos) ====== */
-    :root {
-      --primary: #581c87;
-      --secondary: #38bdf8;
-      --accent: #7c3aed;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --success: #10b981;
-      --bg: #000000;
-      --glass-bg: rgba(20, 20, 20, 0.4);
-      --glass-border: rgba(255, 255, 255, 0.08);
-      --glass-highlight: rgba(255, 255, 255, 0.15);
-      --text: #ededed;
-      --text-muted: #a1a1aa;
-      --radius: 16px;
-      --blur: 16px;
-    }
-    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',-apple-system,sans-serif}
-    body{background:var(--bg);color:var(--text);padding:20px;display:flex;flex-direction:column;min-height:100vh;position:relative;overflow-x:hidden;transition:background .3s}
-    body::before,body::after{content:'';position:fixed;border-radius:50%;filter:blur(120px);z-index:-1;pointer-events:none}
-    body::before{top:-10%;left:-10%;width:50vw;height:50vw;background:radial-gradient(circle,rgba(124,58,237,0.15) 0%,transparent 70%)}
-    body::after{bottom:-10%;right:-10%;width:40vw;height:40vw;background:radial-gradient(circle,rgba(56,189,248,0.12) 0%,transparent 70%)}
-    .container{max-width:1240px;margin:0 auto;flex:1;width:100%;position:relative;z-index:1}
-    .glass{background:var(--glass-bg);backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:0 4px 30px rgba(0,0,0,0.3)}
-    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding:18px 26px;background:linear-gradient(135deg, rgba(59,7,100,0.3), rgba(30,27,75,0.3));backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;box-shadow:0 10px 40px -10px rgba(0,0,0,0.5);position:sticky;top:12px;z-index:50}
-    .logo-titulo{display:flex;align-items:center;gap:14px}
-    .logo-titulo svg{width:42px;height:42px;fill:var(--secondary);filter:drop-shadow(0 0 10px rgba(56,189,248,0.4))}
-    .logo-titulo h1{font-size:1.7rem;font-weight:800;letter-spacing:-0.5px;line-height:1}
-    .logo-titulo p{color:var(--text-muted);font-size:0.9rem;margin-top:2px}
-    .header-actions{display:flex;align-items:center;gap:10px}
-    .menu-wrapper{position:relative}
-    .menu-btn{background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);color:var(--text);padding:11px 18px;border-radius:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;transition:all .2s}
-    .menu-btn:hover{background:rgba(255,255,255,0.1);border-color:var(--glass-highlight)}
-    .menu-btn svg{width:20px;height:20px}
-    .dropdown{position:absolute;top:calc(100% + 12px);right:0;width:340px;background:rgba(18,18,22,0.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.1);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);display:none;z-index:100;overflow:hidden;animation:dropdownIn .22s ease}
-    .dropdown.active{display:block}
-    @keyframes dropdownIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-    .dropdown-scroll{max-height:78vh;overflow-y:auto;padding:10px 10px 14px}
-    .dropdown-scroll::-webkit-scrollbar{width:4px}
-    .dropdown-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
-    .menu-section{margin-bottom:6px}
-    .menu-section-title{font-size:.7rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);font-weight:700;padding:14px 10px 6px;display:flex;align-items:center;gap:6px}
-    .menu-item{width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;background:transparent;border:1px solid transparent;color:var(--text);cursor:pointer;text-align:left;font-size:.92rem;font-weight:500;transition:all .18s}
-    .menu-item:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.06);transform:translateX(2px)}
-    .menu-item.active{background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(124,58,237,0.15));border-color:rgba(56,189,248,0.25);color:#fff}
-    .menu-item .ico{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,0.06);font-size:16px;flex-shrink:0}
-    .menu-item.active .ico{background:rgba(56,189,248,0.2)}
-    .badge-new{font-size:.65rem;background:var(--secondary);color:#000;padding:2px 6px;border-radius:20px;font-weight:700;margin-left:auto}
-    .nav-tabs{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}
-    .tab-btn{background:rgba(255,255,255,0.03);color:var(--text-muted);border:1px solid var(--glass-border);padding:11px 18px;border-radius:12px;cursor:pointer;font-weight:500;transition:all .25s;backdrop-filter:blur(8px);font-size:.9rem}
-    .tab-btn:hover{background:rgba(255,255,255,0.08);color:var(--text)}
-    .tab-btn.active{background:#fff;color:#000;border-color:#fff;box-shadow:0 4px 20px rgba(255,255,255,0.15);font-weight:600}
-    .card{padding:26px;margin-bottom:22px}
-    .card h2{font-weight:700;margin-bottom:6px;font-size:1.25rem}
-    .card-desc{color:var(--text-muted);font-size:.9rem;margin-bottom:18px}
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-    .grid-3 .stat{background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);padding:20px;border-radius:14px;transition:all .2s;display:flex;flex-direction:column}
-    .grid-3 .stat:hover{transform:translateY(-3px);border-color:var(--glass-highlight);box-shadow:0 12px 24px rgba(0,0,0,0.25);background:rgba(255,255,255,0.04)}
-    .grid-3 span{font-size:.78rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:.6px}
-    .grid-3 h3{font-size:1.9rem;margin-top:10px;font-weight:800;letter-spacing:-1px}
-    .stat small{color:var(--text-muted);font-size:.8rem;margin-top:6px}
-    .form-group{margin-bottom:16px;position:relative}
-    label{display:block;margin-bottom:7px;font-weight:500;font-size:.88rem;color:var(--text-muted)}
-    input,select,textarea{width:100%;padding:13px 15px;background:rgba(0,0,0,0.25);border:1px solid var(--glass-border);border-radius:10px;font-size:.95rem;color:var(--text);outline:none;transition:all .2s}
-    textarea{resize:vertical;min-height:90px}
-    input:hover,select:hover,textarea:hover{border-color:var(--glass-highlight)}
-    input:focus,select:focus,textarea:focus{border-color:var(--secondary);background:rgba(0,0,0,0.45);box-shadow:0 0 0 4px rgba(56,189,248,0.15)}
-    input:invalid:not(:placeholder-shown){border-color:var(--danger)}
-    button.btn{background:#fff;color:#000;border:1px solid transparent;padding:11px 18px;border-radius:10px;cursor:pointer;font-weight:600;font-size:.92rem;transition:all .2s;display:inline-flex;justify-content:center;align-items:center;gap:8px}
-    button.btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,255,255,0.18)}
-    button.btn:active{transform:scale(.97)}
-    button.btn-primary{background:var(--secondary);color:#000}
-    button.btn-success{background:var(--success);color:#000}
-    button.btn-warning{background:var(--warning);color:#000}
-    button.btn-danger{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.25)}
-    button.btn-danger:hover{background:rgba(239,68,68,0.2)}
-    button.btn-ghost{background:rgba(255,255,255,0.06);color:var(--text);border:1px solid var(--glass-border)}
-    button.btn-sm{padding:7px 12px;font-size:.82rem;border-radius:8px}
-    .action-btns{display:flex;gap:8px;flex-wrap:wrap}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{padding:14px 12px;text-align:left;border-bottom:1px solid var(--glass-border);font-size:.92rem}
-    th{color:var(--text-muted);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--glass-border)}
-    tr:hover td{background:rgba(255,255,255,0.02)}
-    .tab-content{display:none;animation:fadeIn .25s ease}
-    .tab-content.active{display:block}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-    .cliente-card{border:1px solid var(--glass-border);border-radius:14px;padding:18px;margin-bottom:16px;background:rgba(255,255,255,0.02)}
-    .cliente-card-historial{border:1px solid var(--glass-border);border-radius:14px;padding:18px;margin-bottom:16px;background:rgba(255,255,255,0.015)}
-    .mora-badge{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:var(--danger);padding:6px 10px;border-radius:8px;font-size:.8rem;font-weight:700;display:inline-flex;gap:6px}
-    .ok-badge{background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:var(--success);padding:6px 10px;border-radius:8px;font-size:.8rem;font-weight:700}
-    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
-    .modal-overlay.active{display:flex}
-    .modal{width:100%;max-width:520px;background:rgba(22,22,26,0.96);border:1px solid rgba(255,255,255,0.1);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,0.6);overflow:hidden;animation:modalIn .25s ease}
-    @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-    .modal-header{padding:22px 24px;border-bottom:1px solid var(--glass-border);display:flex;justify-content:space-between;align-items:center}
-    .modal-header h3{font-size:1.1rem;font-weight:700}
-    .modal-body{padding:22px 24px;max-height:70vh;overflow-y:auto}
-    .modal-footer{padding:18px 24px;border-top:1px solid var(--glass-border);display:flex;justify-content:flex-end;gap:10px}
-    .close-x{background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);width:32px;height:32px;border-radius:8px;cursor:pointer;color:var(--text);display:grid;place-items:center}
-    .color-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--glass-border)}
-    .color-row:last-child{border:0}
-    .color-input{width:44px;height:36px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;padding:2px}
-    .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-    .calc-display{background:#000;border:1px solid var(--glass-border);border-radius:12px;padding:16px;text-align:right;font-size:1.8rem;font-weight:700;min-height:64px;letter-spacing:-1px;margin-bottom:12px;overflow:hidden}
-    .calc-keys{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-    .calc-keys button{padding:14px;border-radius:10px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.04);color:var(--text);font-weight:600;font-size:1.05rem;cursor:pointer;transition:all .15s}
-    .calc-keys button:hover{background:rgba(255,255,255,0.08)}
-    .calc-keys button.op{background:rgba(56,189,248,0.15);border-color:rgba(56,189,248,0.25);color:var(--secondary)}
-    .calc-keys button.eq{background:var(--secondary);color:#000;border-color:var(--secondary)}
-    .nota-item{background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;gap:12px}
-    .nota-item p{font-size:.92rem;line-height:1.4;white-space:pre-wrap;word-break:break-word}
-    .chart-wrap{background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:14px;padding:18px}
-    .mv-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-    .mv-card{padding:28px;border-left:3px solid var(--secondary);background:linear-gradient(135deg,rgba(255,255,255,0.03),transparent)}
-    .mv-card.vision{border-left-color:var(--accent)}
-    .mv-card h3{font-size:1.15rem;margin-bottom:10px}
-    .mv-card p{color:var(--text-muted);line-height:1.6;font-size:.95rem}
-    .mv-list{margin-top:12px;padding-left:18px;color:var(--text-muted);font-size:.9rem;line-height:1.7}
-    .notif{position:fixed;bottom:22px;right:22px;background:rgba(20,20,20,0.9);backdrop-filter:blur(16px);border:1px solid var(--glass-border);padding:14px 18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.4);transform:translateY(100px);opacity:0;transition:all .35s;z-index:300;max-width:360px}
-    .notif.show{transform:translateY(0);opacity:1}
-    .notif.success{border-left:3px solid var(--success)}
-    .notif.error{border-left:3px solid var(--danger)}
-    #ticket-area{display:none}
-    @media print{
-      body *{visibility:hidden}
-      #ticket-area,#ticket-area *{visibility:visible}
-      #ticket-area{position:absolute;left:0;top:0;width:100%;display:block!important;background:#fff;color:#000;padding:20px}
-    }
-    @media(max-width:900px){
-      .grid-2,.grid-3,.calc-grid,.mv-grid{grid-template-columns:1fr}
-      header{flex-direction:column;align-items:flex-start;gap:14px}
-      .header-actions{width:100%;justify-content:space-between}
-      .dropdown{width:100vw;right:-26px;border-radius:0 0 18px 18px;top:100%}
-    }
-    @keyframes fall {
-      0% { transform: translateY(-10vh) rotate(0deg) scale(0.5); opacity:1; }
-      10% { opacity:1; }
-      90% { opacity:1; }
-      100% { transform: translateY(110vh) rotate(720deg) scale(1.2); opacity:0; }
-    }
-    @keyframes popScale {
-      0% { transform: scale(0.5); opacity:0; }
-      50% { transform: scale(1.2); opacity:1; }
-      100% { transform: scale(1); opacity:1; }
-    }
-    @keyframes greenPulse {
-      0% { background: rgba(16,185,129,0.0); }
-      30% { background: rgba(16,185,129,0.25); }
-      100% { background: rgba(16,185,129,0.08); }
-    }
-    @keyframes bounceIn {
-      0% { transform: scale(0.3) translateY(-50px); opacity:0; }
-      50% { transform: scale(1.05) translateY(0); opacity:1; }
-      70% { transform: scale(0.9); }
-      100% { transform: scale(1); opacity:1; }
-    }
-    .celebration-overlay {
-      position: fixed; inset:0; z-index:9998; pointer-events:none; overflow:hidden;
-    }
-    .confetti-piece {
-      position: absolute; top:-10vh; width:12px; height:12px; border-radius:2px;
-      animation: fall 3s linear forwards;
-      will-change: transform;
-    }
-    .celebration-center {
-      position: fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      z-index:9999; pointer-events:none;
-      background: rgba(20,20,24,0.95); backdrop-filter:blur(20px);
-      border:1px solid rgba(255,255,255,0.15); border-radius:20px;
-      padding:28px 32px; text-align:center;
-      box-shadow:0 30px 80px rgba(0,0,0,0.6);
-      animation: bounceIn 0.6s ease;
-      min-width:300px;
-    }
-    .celebration-center h2 { font-size:2rem; margin-bottom:8px; }
-    .celebration-center p { color: var(--text-muted); font-size:0.95rem; }
-    .row-pagado { background: rgba(16,185,129,0.12) !important; border-left:3px solid var(--success) !important; animation: greenPulse 1s ease; }
-    .row-pagado td { color: var(--success) !important; }
-    .badge-pagado-verde { background: rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#6ee7b7; padding:6px 12px; border-radius:20px; font-weight:800; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px; animation: popScale 0.5s ease; }
-    #login-overlay{position:fixed;inset:0;z-index:9999;background:radial-gradient(120% 120% at 20% 10%, rgba(124,58,237,0.25), transparent 50%), radial-gradient(100% 100% at 80% 90%, rgba(56,189,248,0.18), transparent 50%), rgba(0,0,0,0.92);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);display:flex;align-items:center;justify-content:center;padding:20px;transition:all .4s}
-    #login-overlay.hidden{opacity:0;pointer-events:none;transform:scale(1.05)}
-    .login-box{width:100%;max-width:380px;background:rgba(20,20,24,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);padding:30px 26px;animation:loginIn .35s ease}
-    @keyframes loginIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-    .login-logo{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:22px}
-    .login-logo svg{width:54px;height:54px;fill:#38bdf8;filter:drop-shadow(0 0 12px rgba(56,189,248,0.5))}
-    .login-logo h2{font-size:1.6rem;font-weight:800;letter-spacing:-0.5px}
-    .login-logo p{color:var(--text-muted);font-size:.85rem;text-align:center}
-    .login-field{position:relative;margin-bottom:14px}
-    .login-field input{padding-right:44px;letter-spacing:1px;font-weight:600}
-    .toggle-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);width:32px;height:32px;border-radius:8px;cursor:pointer;display:grid;place-items:center}
-    .login-hint{font-size:.78rem;color:var(--text-muted);margin-top:10px;line-height:1.4;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;padding:10px 12px}
-    .login-error{display:none;margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;font-size:.85rem;font-weight:600}
-    .login-error.show{display:block}
-  </style>
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#581c87">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Inverkev">
-  <link rel="apple-touch-icon" href="./icon-180.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <meta name="description" content="Inverkev - Sistema Avanzado de Crédito y Cobranza">
+ <title>Inverkev - Gestión de Préstamos</title>
+ <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NSIgc3Ryb2tlPSIjMzhiZGY4IiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxMCIgZmlsbD0iIzM4YmRmOCIvPjwvc3ZnPg==">
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+ <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+ <!-- Supabase Client SDK -->
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+ <style>
+   :root {
+     --primary: #581c87;
+     --secondary: #38bdf8;
+     --accent: #7c3aed;
+     --danger: #ef4444;
+     --warning: #f59e0b;
+     --success: #10b981;
+     --bg: #000000;
+     --glass-bg: rgba(20, 20, 20, 0.4);
+     --glass-border: rgba(255, 255, 255, 0.08);
+     --glass-highlight: rgba(255, 255, 255, 0.15);
+     --text: #ededed;
+     --text-muted: #a1a1aa;
+     --radius: 16px;
+     --blur: 16px;
+   }
+   *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',-apple-system,sans-serif}
+   body{background:var(--bg);color:var(--text);padding:20px;display:flex;flex-direction:column;min-height:100vh;position:relative;overflow-x:hidden;transition:background .3s}
+   body::before,body::after{content:'';position:fixed;border-radius:50%;filter:blur(120px);z-index:-1;pointer-events:none}
+   body::before{top:-10%;left:-10%;width:50vw;height:50vw;background:radial-gradient(circle,rgba(124,58,237,0.15) 0%,transparent 70%)}
+   body::after{bottom:-10%;right:-10%;width:40vw;height:40vw;background:radial-gradient(circle,rgba(56,189,248,0.12) 0%,transparent 70%)}
+   .container{max-width:1240px;margin:0 auto;flex:1;width:100%;position:relative;z-index:1}
+   .glass{background:var(--glass-bg);backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:0 4px 30px rgba(0,0,0,0.3)}
+   header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding:18px 26px;background:linear-gradient(135deg, rgba(59,7,100,0.3), rgba(30,27,75,0.3));backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;box-shadow:0 10px 40px -10px rgba(0,0,0,0.5);position:sticky;top:12px;z-index:50}
+   .logo-titulo{display:flex;align-items:center;gap:14px}
+   .logo-titulo svg{width:42px;height:42px;fill:var(--secondary);filter:drop-shadow(0 0 10px rgba(56,189,248,0.4))}
+   .logo-titulo h1{font-size:1.7rem;font-weight:800;letter-spacing:-0.5px;line-height:1}
+   .logo-titulo p{color:var(--text-muted);font-size:0.9rem;margin-top:2px}
+   .header-actions{display:flex;align-items:center;gap:10px}
+   .menu-wrapper{position:relative}
+   .menu-btn{background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);color:var(--text);padding:11px 18px;border-radius:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;transition:all .2s}
+   .menu-btn:hover{background:rgba(255,255,255,0.1);border-color:var(--glass-highlight)}
+   .menu-btn svg{width:20px;height:20px}
+   .dropdown{position:absolute;top:calc(100% + 12px);right:0;width:340px;background:rgba(18,18,22,0.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.1);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);display:none;z-index:100;overflow:hidden;animation:dropdownIn .22s ease}
+   .dropdown.active{display:block}
+   @keyframes dropdownIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+   .dropdown-scroll{max-height:78vh;overflow-y:auto;padding:10px 10px 14px}
+   .dropdown-scroll::-webkit-scrollbar{width:4px}
+   .dropdown-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
+   .menu-section{margin-bottom:6px}
+   .menu-section-title{font-size:.7rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);font-weight:700;padding:14px 10px 6px;display:flex;align-items:center;gap:6px}
+   .menu-item{width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;background:transparent;border:1px solid transparent;color:var(--text);cursor:pointer;text-align:left;font-size:.92rem;font-weight:500;transition:all .18s}
+   .menu-item:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.06);transform:translateX(2px)}
+   .menu-item.active{background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(124,58,237,0.15));border-color:rgba(56,189,248,0.25);color:#fff}
+   .menu-item .ico{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,0.06);font-size:16px;flex-shrink:0}
+   .menu-item.active .ico{background:rgba(56,189,248,0.2)}
+   .badge-new{font-size:.65rem;background:var(--secondary);color:#000;padding:2px 6px;border-radius:20px;font-weight:700;margin-left:auto}
+   .nav-tabs{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+   .tab-btn{background:rgba(255,255,255,0.03);color:var(--text-muted);border:1px solid var(--glass-border);padding:11px 18px;border-radius:12px;cursor:pointer;font-weight:500;transition:all .25s;backdrop-filter:blur(8px);font-size:.9rem}
+   .tab-btn:hover{background:rgba(255,255,255,0.08);color:var(--text)}
+   .tab-btn.active{background:#fff;color:#000;border-color:#fff;box-shadow:0 4px 20px rgba(255,255,255,0.15);font-weight:600}
+   .card{padding:26px;margin-bottom:22px}
+   .card h2{font-weight:700;margin-bottom:6px;font-size:1.25rem}
+   .card-desc{color:var(--text-muted);font-size:.9rem;margin-bottom:18px}
+   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+   .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+   .grid-3 .stat{background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);padding:20px;border-radius:14px;transition:all .2s;display:flex;flex-direction:column}
+   .grid-3 .stat:hover{transform:translateY(-3px);border-color:var(--glass-highlight);box-shadow:0 12px 24px rgba(0,0,0,0.25);background:rgba(255,255,255,0.04)}
+   .grid-3 span{font-size:.78rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:.6px}
+   .grid-3 h3{font-size:1.9rem;margin-top:10px;font-weight:800;letter-spacing:-1px}
+   .stat small{color:var(--text-muted);font-size:.8rem;margin-top:6px}
+   .form-group{margin-bottom:16px;position:relative}
+   label{display:block;margin-bottom:7px;font-weight:500;font-size:.88rem;color:var(--text-muted)}
+   input,select,textarea{width:100%;padding:13px 15px;background:rgba(0,0,0,0.25);border:1px solid var(--glass-border);border-radius:10px;font-size:.95rem;color:var(--text);outline:none;transition:all .2s}
+   textarea{resize:vertical;min-height:90px}
+   input:hover,select:hover,textarea:hover{border-color:var(--glass-highlight)}
+   input:focus,select:focus,textarea:focus{border-color:var(--secondary);background:rgba(0,0,0,0.45);box-shadow:0 0 0 4px rgba(56,189,248,0.15)}
+   input:invalid:not(:placeholder-shown){border-color:var(--danger)}
+   button.btn{background:#fff;color:#000;border:1px solid transparent;padding:11px 18px;border-radius:10px;cursor:pointer;font-weight:600;font-size:.92rem;transition:all .2s;display:inline-flex;justify-content:center;align-items:center;gap:8px}
+   button.btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,255,255,0.18)}
+   button.btn:active{transform:scale(.97)}
+   button.btn-primary{background:var(--secondary);color:#000}
+   button.btn-success{background:var(--success);color:#000}
+   button.btn-warning{background:var(--warning);color:#000}
+   button.btn-danger{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.25)}
+   button.btn-danger:hover{background:rgba(239,68,68,0.2)}
+   button.btn-ghost{background:rgba(255,255,255,0.06);color:var(--text);border:1px solid var(--glass-border)}
+   button.btn-sm{padding:7px 12px;font-size:.82rem;border-radius:8px}
+   .action-btns{display:flex;gap:8px;flex-wrap:wrap}
+   table{width:100%;border-collapse:collapse;margin-top:10px}
+   th,td{padding:14px 12px;text-align:left;border-bottom:1px solid var(--glass-border);font-size:.92rem}
+   th{color:var(--text-muted);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--glass-border)}
+   tr:hover td{background:rgba(255,255,255,0.02)}
+   .tab-content{display:none;animation:fadeIn .25s ease}
+   .tab-content.active{display:block}
+   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+   .cliente-card{border:1px solid var(--glass-border);border-radius:14px;padding:18px;margin-bottom:16px;background:rgba(255,255,255,0.02)}
+   .cliente-card-historial{border:1px solid var(--glass-border);border-radius:14px;padding:18px;margin-bottom:16px;background:rgba(255,255,255,0.015)}
+   .mora-badge{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:var(--danger);padding:6px 10px;border-radius:8px;font-size:.8rem;font-weight:700;display:inline-flex;gap:6px}
+   .ok-badge{background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:var(--success);padding:6px 10px;border-radius:8px;font-size:.8rem;font-weight:700}
+   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+   .modal-overlay.active{display:flex}
+   .modal{width:100%;max-width:520px;background:rgba(22,22,26,0.96);border:1px solid rgba(255,255,255,0.1);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,0.6);overflow:hidden;animation:modalIn .25s ease}
+   @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+   .modal-header{padding:22px 24px;border-bottom:1px solid var(--glass-border);display:flex;justify-content:space-between;align-items:center}
+   .modal-header h3{font-size:1.1rem;font-weight:700}
+   .modal-body{padding:22px 24px;max-height:70vh;overflow-y:auto}
+   .modal-footer{padding:18px 24px;border-top:1px solid var(--glass-border);display:flex;justify-content:flex-end;gap:10px}
+   .close-x{background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);width:32px;height:32px;border-radius:8px;cursor:pointer;color:var(--text);display:grid;place-items:center}
+   .color-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--glass-border)}
+   .color-row:last-child{border:0}
+   .color-input{width:44px;height:36px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;padding:2px}
+   .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+   .calc-display{background:#000;border:1px solid var(--glass-border);border-radius:12px;padding:16px;text-align:right;font-size:1.8rem;font-weight:700;min-height:64px;letter-spacing:-1px;margin-bottom:12px;overflow:hidden}
+   .calc-keys{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+   .calc-keys button{padding:14px;border-radius:10px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.04);color:var(--text);font-weight:600;font-size:1.05rem;cursor:pointer;transition:all .15s}
+   .calc-keys button:hover{background:rgba(255,255,255,0.08)}
+   .calc-keys button.op{background:rgba(56,189,248,0.15);border-color:rgba(56,189,248,0.25);color:var(--secondary)}
+   .calc-keys button.eq{background:var(--secondary);color:#000;border-color:var(--secondary)}
+   .nota-item{background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;gap:12px}
+   .nota-item p{font-size:.92rem;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+   .chart-wrap{background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:14px;padding:18px}
+   .mv-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+   .mv-card{padding:28px;border-left:3px solid var(--secondary);background:linear-gradient(135deg,rgba(255,255,255,0.03),transparent)}
+   .mv-card.vision{border-left-color:var(--accent)}
+   .mv-card h3{font-size:1.15rem;margin-bottom:10px}
+   .mv-card p{color:var(--text-muted);line-height:1.6;font-size:.95rem}
+   .mv-list{margin-top:12px;padding-left:18px;color:var(--text-muted);font-size:.9rem;line-height:1.7}
+   .notif{position:fixed;bottom:22px;right:22px;background:rgba(20,20,20,0.9);backdrop-filter:blur(16px);border:1px solid var(--glass-border);padding:14px 18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.4);transform:translateY(100px);opacity:0;transition:all .35s;z-index:300;max-width:360px}
+   .notif.show{transform:translateY(0);opacity:1}
+   .notif.success{border-left:3px solid var(--success)}
+   .notif.error{border-left:3px solid var(--danger)}
+   #ticket-area{display:none}
+   @media print{
+     body *{visibility:hidden}
+     #ticket-area,#ticket-area *{visibility:visible}
+     #ticket-area{position:absolute;left:0;top:0;width:100%;display:block!important;background:#fff;color:#000;padding:20px}
+   }
+   @media(max-width:900px){
+     .grid-2,.grid-3,.calc-grid,.mv-grid{grid-template-columns:1fr}
+     header{flex-direction:column;align-items:flex-start;gap:14px}
+     .header-actions{width:100%;justify-content:space-between}
+     .dropdown{width:100vw;right:-26px;border-radius:0 0 18px 18px;top:100%}
+   }
+   @keyframes fall {
+     0% { transform: translateY(-10vh) rotate(0deg) scale(0.5); opacity:1; }
+     10% { opacity:1; }
+     90% { opacity:1; }
+     100% { transform: translateY(110vh) rotate(720deg) scale(1.2); opacity:0; }
+   }
+   @keyframes popScale {
+     0% { transform: scale(0.5); opacity:0; }
+     50% { transform: scale(1.2); opacity:1; }
+     100% { transform: scale(1); opacity:1; }
+   }
+   @keyframes greenPulse {
+     0% { background: rgba(16,185,129,0.0); }
+     30% { background: rgba(16,185,129,0.25); }
+     100% { background: rgba(16,185,129,0.08); }
+   }
+   @keyframes bounceIn {
+     0% { transform: scale(0.3) translateY(-50px); opacity:0; }
+     50% { transform: scale(1.05) translateY(0); opacity:1; }
+     70% { transform: scale(0.9); }
+     100% { transform: scale(1); opacity:1; }
+   }
+   .celebration-overlay {
+     position: fixed; inset:0; z-index:9998; pointer-events:none; overflow:hidden;
+   }
+   .confetti-piece {
+     position: absolute; top:-10vh; width:12px; height:12px; border-radius:2px;
+     animation: fall 3s linear forwards;
+     will-change: transform;
+   }
+   .celebration-center {
+     position: fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+     z-index:9999; pointer-events:none;
+     background: rgba(20,20,24,0.95); backdrop-filter:blur(20px);
+     border:1px solid rgba(255,255,255,0.15); border-radius:20px;
+     padding:28px 32px; text-align:center;
+     box-shadow:0 30px 80px rgba(0,0,0,0.6);
+     animation: bounceIn 0.6s ease;
+     min-width:300px;
+   }
+   .celebration-center h2 { font-size:2rem; margin-bottom:8px; }
+   .celebration-center p { color: var(--text-muted); font-size:0.95rem; }
+   .row-pagado { background: rgba(16,185,129,0.12) !important; border-left:3px solid var(--success) !important; animation: greenPulse 1s ease; }
+   .row-pagado td { color: var(--success) !important; }
+   .badge-pagado-verde { background: rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#6ee7b7; padding:6px 12px; border-radius:20px; font-weight:800; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px; animation: popScale 0.5s ease; }
+   #login-overlay{position:fixed;inset:0;z-index:9999;background:radial-gradient(120% 120% at 20% 10%, rgba(124,58,237,0.25), transparent 50%), radial-gradient(100% 100% at 80% 90%, rgba(56,189,248,0.18), transparent 50%), rgba(0,0,0,0.92);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);display:flex;align-items:center;justify-content:center;padding:20px;transition:all .4s}
+   #login-overlay.hidden{opacity:0;pointer-events:none;transform:scale(1.05)}
+   .login-box{width:100%;max-width:380px;background:rgba(20,20,24,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);padding:30px 26px;animation:loginIn .35s ease}
+   @keyframes loginIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+   .login-logo{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:22px}
+   .login-logo svg{width:54px;height:54px;fill:#38bdf8;filter:drop-shadow(0 0 12px rgba(56,189,248,0.5))}
+   .login-logo h2{font-size:1.6rem;font-weight:800;letter-spacing:-0.5px}
+   .login-logo p{color:var(--text-muted);font-size:.85rem;text-align:center}
+   .login-field{position:relative;margin-bottom:14px}
+   .login-field input{padding-right:44px;letter-spacing:1px;font-weight:600}
+   .toggle-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);width:32px;height:32px;border-radius:8px;cursor:pointer;display:grid;place-items:center}
+   .login-hint{font-size:.78rem;color:var(--text-muted);margin-top:10px;line-height:1.4;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;padding:10px 12px}
+   .login-error{display:none;margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;font-size:.85rem;font-weight:600}
+   .login-error.show{display:block}
+ </style>
+ <link rel="manifest" href="./manifest.json">
+ <meta name="theme-color" content="#581c87">
+ <meta name="apple-mobile-web-app-capable" content="yes">
+ <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+ <meta name="apple-mobile-web-app-title" content="Inverkev">
+ <link rel="apple-touch-icon" href="./icon-180.png">
+ <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-overlay">
-  <div class="login-box glass">
-    <div class="login-logo">
-      <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="10" fill="currentColor"/><path d="M50 20 L50 35 M50 65 L50 80 M20 50 L35 50 M65 50 L80 50" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-      <h2>Inverkev</h2>
-      <p>Acceso seguro • Sistema de Crédito<br><small style="opacity:.7">Ingresa tu clave para continuar</small></p>
-    </div>
-    <div class="login-field">
-      <input type="password" id="login-pass" placeholder="••••••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') intentarLogin()">
-      <button class="toggle-eye" onclick="togglePass()" type="button" title="Ver clave">👁️</button>
-    </div>
-    <button class="btn btn-primary" style="width:100%;padding:14px" onclick="intentarLogin()" id="btn-login">🔐 Ingresar</button>
-    <div class="login-error" id="login-error"></div>
-    <div class="login-hint">🔒 La clave está protegida con hash SHA-256. No se guarda en texto plano. Si olvidas la clave, contacta al administrador.<br><br>💡 PWA: Puedes instalar esta app en tu celular desde el menú del navegador > Instalar app.</div>
-  </div>
+ <div class="login-box glass">
+   <div class="login-logo">
+     <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="10" fill="currentColor"/><path d="M50 20 L50 35 M50 65 L50 80 M20 50 L35 50 M65 50 L80 50" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+     <h2>Inverkev</h2>
+     <p>Acceso seguro • Sistema de Crédito<br><small style="opacity:.7">Ingresa tu clave para continuar</small></p>
+   </div>
+   <div class="login-field">
+     <input type="password" id="login-pass" placeholder="••••••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') intentarLogin()">
+     <button class="toggle-eye" onclick="togglePass()" type="button" title="Ver clave">👁️</button>
+   </div>
+   <button class="btn btn-primary" style="width:100%;padding:14px" onclick="intentarLogin()" id="btn-login">🔐 Ingresar</button>
+   <div class="login-error" id="login-error"></div>
+   <div class="login-hint">🔒 La clave está protegida con hash SHA-256. No se guarda en texto plano. Si olvidas la clave, contacta al administrador.<br><br>💡 PWA: Puedes instalar esta app en tu celular desde el menú del navegador > Instalar app.</div>
+ </div>
 </div>
 
 <div class="container">
 <header>
-  <div class="logo-titulo">
-    <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="10" fill="currentColor"/><path d="M50 20 L50 35 M50 65 L50 80 M20 50 L35 50 M65 50 L80 50" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-    <div>
-      <h1>Inverkev</h1>
-      <p id="subtitle-header">Sistema Avanzado de Crédito</p>
-    </div>
-  </div>
-  <div class="header-actions"><button class="btn btn-ghost btn-sm" id="btn-sonido" onclick="toggleSonido()" title="Activar/Desactivar sonido">🔊 Sonido</button><button class="btn btn-ghost btn-sm" id="btn-instalar-pwa" style="display:none" onclick="instalarPWA()">📲 Instalar</button>
-    <div class="action-btns">
-      <button class="btn btn-ghost btn-sm" onclick="exportarExcel()">📥 Exportar</button>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('buscar-global').focus()">🔍 Buscar</button>
-    </div>
-    <div class="menu-wrapper">
-      <button class="menu-btn" id="menuBtn" onclick="toggleMenu()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-        <span id="menuBtnText">Menú</span>
-      </button>
-      <div class="dropdown" id="dropdownMenu">
-        <div class="dropdown-scroll">
-          <div class="menu-section">
-            <span class="menu-section-title" data-i18n="principal">🚀 Principal</span>
-            <button class="menu-item active" data-tab="inicio" onclick="switchTab('inicio',this);closeMenu()"><span class="ico">🏠</span> <span data-i18n="inicio">Inicio</span> <span class="badge-new">Dashboard</span></button>
-            <button class="menu-item" data-tab="nuevo" onclick="switchTab('nuevo',this);closeMenu()"><span class="ico">➕</span> <span data-i18n="nuevoPrestamo">Nuevo Préstamo</span></button>
-            <button class="menu-item" data-tab="abonos" onclick="switchTab('abonos',this);closeMenu()"><span class="ico">💰</span> <span data-i18n="registrarAbono">Registrar Abono</span></button>
-            <button class="menu-item" data-tab="historial" onclick="switchTab('historial',this);closeMenu()"><span class="ico">📜</span> <span data-i18n="historialClientes">Historial Clientes</span></button>
-          </div>
-          <div class="menu-section">
-            <span class="menu-section-title" data-i18n="empresa">🏢 Empresa</span>
-            <button class="menu-item" data-tab="mision-vision" onclick="switchTab('mision-vision',this);closeMenu()"><span class="ico">🎯</span> <span data-i18n="misionVision">Misión y Visión</span></button>
-          </div>
-          <div class="menu-section">
-            <span class="menu-section-title" data-i18n="configuracion">⚙️ Configuración</span>
-            <button class="menu-item" onclick="openModal('modal-estilo');closeMenu()"><span class="ico">🎨</span> <span data-i18n="estiloPagina">Estilo de la Página</span></button>
-            <button class="menu-item" onclick="openModal('modal-colores');closeMenu()"><span class="ico">🌈</span> <span data-i18n="colores">Colores</span></button>
-            <button class="menu-item" onclick="openModal('modal-idioma');closeMenu()"><span class="ico">🌐</span> <span data-i18n="idioma">Idioma</span></button>
-            <button class="menu-item" onclick="toggleSonido();closeMenu()"><span class="ico">🔊</span> <span>Sonido ON/OFF</span></button>
-          </div>
-          <div class="menu-section">
-            <span class="menu-section-title" data-i18n="herramientas">🛠️ Herramientas</span>
-            <button class="menu-item" data-tab="calculadora" onclick="switchTab('calculadora',this);closeMenu()"><span class="ico">🧮</span> <span data-i18n="calculadora">Calculadora</span></button>
-            <button class="menu-item" data-tab="notas" onclick="switchTab('notas',this);closeMenu()"><span class="ico">📝</span> <span data-i18n="notas">Notas</span></button>
-            <button class="menu-item" data-tab="graficos" onclick="switchTab('graficos',this);closeMenu()"><span class="ico">📊</span> <span data-i18n="graficos">Gráficos de Préstamos</span></button>
-          </div>
-        <div class="menu-section"><span class="menu-section-title" data-i18n="sesion">🔒 Sesión</span><button class="menu-item" onclick="cerrarSesion()"><span class="ico">🚪</span> <span data-i18n="cerrarSesion">Cerrar sesión</span></button></div></div>
-      </div>
-    </div>
-  </div>
+ <div class="logo-titulo">
+   <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="10" fill="currentColor"/><path d="M50 20 L50 35 M50 65 L50 80 M20 50 L35 50 M65 50 L80 50" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+   <div>
+     <h1>Inverkev</h1>
+     <p id="subtitle-header">Sistema Avanzado de Crédito</p>
+   </div>
+ </div>
+ <div class="header-actions"><button class="btn btn-ghost btn-sm" id="btn-sonido" onclick="toggleSonido()" title="Activar/Desactivar sonido">🔊 Sonido</button><button class="btn btn-ghost btn-sm" id="btn-instalar-pwa" style="display:none" onclick="instalarPWA()">📲 Instalar</button>
+   <div class="action-btns">
+     <button class="btn btn-ghost btn-sm" onclick="exportarExcel()">📥 Exportar</button>
+     <button class="btn btn-ghost btn-sm" onclick="document.getElementById('buscar-global').focus()">🔍 Buscar</button>
+   </div>
+   <div class="menu-wrapper">
+     <button class="menu-btn" id="menuBtn" onclick="toggleMenu()">
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+       <span id="menuBtnText">Menú</span>
+     </button>
+     <div class="dropdown" id="dropdownMenu">
+       <div class="dropdown-scroll">
+         <div class="menu-section">
+           <span class="menu-section-title" data-i18n="principal">🚀 Principal</span>
+           <button class="menu-item active" data-tab="inicio" onclick="switchTab('inicio',this);closeMenu()"><span class="ico">🏠</span> <span data-i18n="inicio">Inicio</span> <span class="badge-new">Dashboard</span></button>
+           <button class="menu-item" data-tab="nuevo" onclick="switchTab('nuevo',this);closeMenu()"><span class="ico">➕</span> <span data-i18n="nuevoPrestamo">Nuevo Préstamo</span></button>
+           <button class="menu-item" data-tab="abonos" onclick="switchTab('abonos',this);closeMenu()"><span class="ico">💰</span> <span data-i18n="registrarAbono">Registrar Abono</span></button>
+           <button class="menu-item" data-tab="historial" onclick="switchTab('historial',this);closeMenu()"><span class="ico">📜</span> <span data-i18n="historialClientes">Historial Clientes</span></button>
+         </div>
+         <div class="menu-section">
+           <span class="menu-section-title" data-i18n="empresa">🏢 Empresa</span>
+           <button class="menu-item" data-tab="mision-vision" onclick="switchTab('mision-vision',this);closeMenu()"><span class="ico">🎯</span> <span data-i18n="misionVision">Misión y Visión</span></button>
+         </div>
+         <div class="menu-section">
+           <span class="menu-section-title" data-i18n="configuracion">⚙️ Configuración</span>
+           <button class="menu-item" onclick="openModal('modal-estilo');closeMenu()"><span class="ico">🎨</span> <span data-i18n="estiloPagina">Estilo de la Página</span></button>
+           <button class="menu-item" onclick="openModal('modal-colores');closeMenu()"><span class="ico">🌈</span> <span data-i18n="colores">Colores</span></button>
+           <button class="menu-item" onclick="openModal('modal-idioma');closeMenu()"><span class="ico">🌐</span> <span data-i18n="idioma">Idioma</span></button>
+           <button class="menu-item" onclick="toggleSonido();closeMenu()"><span class="ico">🔊</span> <span>Sonido ON/OFF</span></button>
+         </div>
+         <div class="menu-section">
+           <span class="menu-section-title" data-i18n="herramientas">🛠️ Herramientas</span>
+           <button class="menu-item" data-tab="calculadora" onclick="switchTab('calculadora',this);closeMenu()"><span class="ico">🧮</span> <span data-i18n="calculadora">Calculadora</span></button>
+           <button class="menu-item" data-tab="notas" onclick="switchTab('notas',this);closeMenu()"><span class="ico">📝</span> <span data-i18n="notas">Notas</span></button>
+           <button class="menu-item" data-tab="graficos" onclick="switchTab('graficos',this);closeMenu()"><span class="ico">📊</span> <span data-i18n="graficos">Gráficos de Préstamos</span></button>
+         </div>
+       <div class="menu-section"><span class="menu-section-title" data-i18n="sesion">🔒 Sesión</span><button class="menu-item" onclick="cerrarSesion()"><span class="ico">🚪</span> <span data-i18n="cerrarSesion">Cerrar sesión</span></button></div></div>
+     </div>
+   </div>
+ </div>
 </header>
 
 <div class="nav-tabs" id="mainTabs">
-  <button class="tab-btn active" data-target="inicio" onclick="switchTab('inicio',this)">Inicio</button>
-  <button class="tab-btn" data-target="nuevo" onclick="switchTab('nuevo',this)">Nuevo Préstamo</button>
-  <button class="tab-btn" data-target="abonos" onclick="switchTab('abonos',this)">Abonos</button>
-  <button class="tab-btn" data-target="historial" onclick="switchTab('historial',this)">Historial</button>
-  <button class="tab-btn" data-target="calculadora" onclick="switchTab('calculadora',this)">Calculadora</button>
-  <button class="tab-btn" data-target="notas" onclick="switchTab('notas',this)">Notas</button>
-  <button class="tab-btn" data-target="graficos" onclick="switchTab('graficos',this)">Gráficos</button>
+ <button class="tab-btn active" data-target="inicio" onclick="switchTab('inicio',this)">Inicio</button>
+ <button class="tab-btn" data-target="nuevo" onclick="switchTab('nuevo',this)">Nuevo Préstamo</button>
+ <button class="tab-btn" data-target="abonos" onclick="switchTab('abonos',this)">Abonos</button>
+ <button class="tab-btn" data-target="historial" onclick="switchTab('historial',this)">Historial</button>
+ <button class="tab-btn" data-target="calculadora" onclick="switchTab('calculadora',this)">Calculadora</button>
+ <button class="tab-btn" data-target="notas" onclick="switchTab('notas',this)">Notas</button>
+ <button class="tab-btn" data-target="graficos" onclick="switchTab('graficos',this)">Gráficos</button>
 </div>
 
 <!-- INICIO -->
 <div id="tab-inicio" class="tab-content active">
-  <div class="card glass" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;padding:18px 22px;margin-bottom:18px;background:linear-gradient(135deg, rgba(56,189,248,0.12), rgba(124,58,237,0.12));border:1px solid rgba(56,189,248,0.2)">
-    <div><span style="font-size:.78rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:.6px">💼 Mi Presupuesto para Prestar</span><h3 id="stat-presupuesto" style="font-size:1.9rem;margin-top:6px">$0</h3><small id="stat-presupuesto-detalle" style="color:var(--text-muted)">Disponible para prestar</small></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" onclick="editarPresupuesto()">✏️ Editar presupuesto</button><button class="btn btn-ghost btn-sm" onclick="document.getElementById('buscar-global').focus()">🔍 Buscar</button></div>
-  </div>
-  <div class="grid-3">
-    <div class="stat glass" style="border:1px solid rgba(16,185,129,0.2)"><span style="color:var(--success)">💰 Ganancia Total (Intereses)</span><h3 id="stat-ganancia" style="color:var(--success)">$0</h3><small id="stat-ganancia-desc">Ganancia pactada + cobrada</small></div>
-    <div class="stat glass"><span>Disponible para prestar</span><h3 id="stat-disponible" style="color:var(--secondary)">$0</h3><small>Presupuesto - prestado + recaudado</small></div>
-    <div class="stat glass"><span>Utilidad cobrada</span><h3 id="stat-utilidad-cobrada">$0</h3><small>De abonos reales</small></div>
-  </div>
-  <div class="grid-3" style="margin-top:18px">
-    <div class="stat glass"><span id="lbl-total-prestado">Total Prestado (con interés)</span><h3 id="stat-prestado">$0</h3><small id="lbl-prestado-desc">Capital + intereses pactados</small></div>
-    <div class="stat glass"><span id="lbl-total-recaudado">Total Recaudado</span><h3 id="stat-recaudado">$0</h3><small id="lbl-recaudado-desc">Suma de abonos registrados</small></div>
-    <div class="stat glass"><span id="lbl-saldo-pendiente">Saldo Pendiente</span><h3 id="stat-saldo" style="color:var(--secondary)">$0</h3><small id="lbl-saldo-desc">Por cobrar con mora incluida</small></div>
-  </div>
-  <div class="grid-3" style="margin-top:20px">
-    <div class="stat glass"><span>Clientes Activos</span><h3 id="stat-clientes">0</h3></div>
-    <div class="stat glass"><span>Préstamos Activos</span><h3 id="stat-prestamos-activos">0</h3></div>
-    <div class="stat glass"><span>En Mora</span><h3 id="stat-mora" style="color:var(--danger)">0</h3></div>
-  </div>
+ <div class="card glass" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;padding:18px 22px;margin-bottom:18px;background:linear-gradient(135deg, rgba(56,189,248,0.12), rgba(124,58,237,0.12));border:1px solid rgba(56,189,248,0.2)">
+   <div><span style="font-size:.78rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:.6px">💼 Mi Presupuesto para Prestar</span><h3 id="stat-presupuesto" style="font-size:1.9rem;margin-top:6px">$0</h3><small id="stat-presupuesto-detalle" style="color:var(--text-muted)">Disponible para prestar</small></div>
+   <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" onclick="editarPresupuesto()">✏️ Editar presupuesto</button><button class="btn btn-ghost btn-sm" onclick="document.getElementById('buscar-global').focus()">🔍 Buscar</button></div>
+ </div>
+ <div class="grid-3">
+   <div class="stat glass" style="border:1px solid rgba(16,185,129,0.2)"><span style="color:var(--success)">💰 Ganancia Total (Intereses)</span><h3 id="stat-ganancia" style="color:var(--success)">$0</h3><small id="stat-ganancia-desc">Ganancia pactada + cobrada</small></div>
+   <div class="stat glass"><span>Disponible para prestar</span><h3 id="stat-disponible" style="color:var(--secondary)">$0</h3><small>Presupuesto - prestado + recaudado</small></div>
+   <div class="stat glass"><span>Utilidad cobrada</span><h3 id="stat-utilidad-cobrada">$0</h3><small>De abonos reales</small></div>
+ </div>
+ <div class="grid-3" style="margin-top:18px">
+   <div class="stat glass"><span id="lbl-total-prestado">Total Prestado (con interés)</span><h3 id="stat-prestado">$0</h3><small id="lbl-prestado-desc">Capital + intereses pactados</small></div>
+   <div class="stat glass"><span id="lbl-total-recaudado">Total Recaudado</span><h3 id="stat-recaudado">$0</h3><small id="lbl-recaudado-desc">Suma de abonos registrados</small></div>
+   <div class="stat glass"><span id="lbl-saldo-pendiente">Saldo Pendiente</span><h3 id="stat-saldo" style="color:var(--secondary)">$0</h3><small id="lbl-saldo-desc">Por cobrar con mora incluida</small></div>
+ </div>
+ <div class="grid-3" style="margin-top:20px">
+   <div class="stat glass"><span>Clientes Activos</span><h3 id="stat-clientes">0</h3></div>
+   <div class="stat glass"><span>Préstamos Activos</span><h3 id="stat-prestamos-activos">0</h3></div>
+   <div class="stat glass"><span>En Mora</span><h3 id="stat-mora" style="color:var(--danger)">0</h3></div>
+ </div>
 
-  <div class="card glass" style="margin-top:22px">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px">
-      <h2 id="lbl-prestamos-activos">Préstamos Activos</h2>
-      <div style="display:flex;gap:8px"><input type="text" id="buscar-global" placeholder="Buscar por nombre, documento o ID..." style="max-width:320px" oninput="renderizarDashboard()"><button class="btn btn-sm btn-danger" onclick="eliminarTodosClientes()" title="Borrar todos">🗑️ Borrar todo</button></div>
-    </div>
-    <div style="overflow:auto">
-      <table>
-        <thead><tr><th data-i18n='thCliente'>Cliente</th><th data-i18n='thPrestamo'>Préstamo</th><th data-i18n='thVencimiento'>Vencimiento</th><th data-i18n='thCuotas'>Cuotas</th><th data-i18n='thSaldo'>Saldo</th><th data-i18n='thEstado'>Estado</th><th data-i18n='thAcciones'>Acciones</th></tr></thead>
-        <tbody id="tabla-prestamos"></tbody>
-      </table>
-    </div>
-  </div>
+ <div class="card glass" style="margin-top:22px">
+   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+     <h2 id="lbl-prestamos-activos">Préstamos Activos</h2>
+     <div style="display:flex;gap:8px"><input type="text" id="buscar-global" placeholder="Buscar por nombre, documento o ID..." style="max-width:320px" oninput="renderizarDashboard()"><button class="btn btn-sm btn-danger" onclick="eliminarTodosClientes()" title="Borrar todos">🗑️ Borrar todo</button></div>
+   </div>
+   <div style="overflow:auto">
+     <table>
+       <thead><tr><th data-i18n='thCliente'>Cliente</th><th data-i18n='thPrestamo'>Préstamo</th><th data-i18n='thVencimiento'>Vencimiento</th><th data-i18n='thCuotas'>Cuotas</th><th data-i18n='thSaldo'>Saldo</th><th data-i18n='thEstado'>Estado</th><th data-i18n='thAcciones'>Acciones</th></tr></thead>
+       <tbody id="tabla-prestamos"></tbody>
+     </table>
+   </div>
+ </div>
 </div>
 
 <!-- NUEVO PRESTAMO -->
 <div id="tab-nuevo" class="tab-content">
-  <div class="grid-2">
-    <div class="card glass">
-      <h2 id="lbl-nuevo-titulo">Crear Nuevo Préstamo</h2>
-      <p class="card-desc" id="lbl-nuevo-desc">Si el documento existe, se agregará como nuevo préstamo al cliente.</p>
-      <form id="form-prestamo" onsubmit="crearPrestamo(event)" novalidate>
-        <div class="form-group"><label>Documento *</label><input type="text" id="cli-doc" placeholder="Ej: 12345678" required pattern=".{3,}" oninput="buscarClienteExistente()"><div id="alerta-cliente-existe" style="display:none;margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.2);font-size:.85rem"></div></div>
-        <div class="grid-2" style="gap:14px"><div class="form-group"><label>Nombre *</label><input type="text" id="cli-nombre" required placeholder="Nombre completo"></div><div class="form-group"><label>Teléfono</label><input type="tel" id="cli-tel" placeholder="300 123 4567"></div></div>
-        <div class="grid-2" style="gap:14px"><div class="form-group"><label>Email</label><input type="email" id="cli-email" placeholder="cliente@email.com"></div><div class="form-group"><label>Dirección de residencia *</label><input type="text" id="cli-direccion" placeholder="Cra 123 #45-67, Barranquilla" required></div></div>
-        <div class="grid-2" style="gap:14px">
-          <div class="form-group"><label>Monto *</label><input type="number" id="cli-monto" required min="1000" step="1000" placeholder="500000" oninput="calcularPreview()"></div>
-          <div class="form-group"><label>Interés mensual % *</label><input type="number" id="cli-interes" required min="0" max="100" step="0.1" placeholder="5" oninput="calcularPreview()"></div><small style="color:var(--text-muted);font-size:.7rem">Se multiplica x meses auto</small></div>
-        <div class="grid-2" style="gap:14px">
-          <div class="form-group"><label>Plazo (meses) *</label><select id="cli-plazo" required onchange="actualizarVencimientoPorMeses(); calcularPreview()"><option value="1">1 mes</option><option value="2">2 meses</option><option value="3">3 meses</option><option value="4">4 meses</option><option value="5">5 meses</option><option value="6">6 meses</option><option value="8">8 meses</option><option value="10">10 meses</option><option value="12">12 meses</option><option value="15">15 meses</option><option value="18">18 meses</option><option value="24">24 meses</option><option value="36">36 meses</option></select><small style="color:var(--text-muted);font-size:.75rem">Cuota: <span id="preview-cuota">-</span></small></div>
-          <div class="form-group"><label>Fecha Vencimiento *</label><input type="date" id="cli-vencimiento" required><small style="color:var(--text-muted);font-size:.75rem">Se calcula automático, editable</small></div>
-        </div>
-        <div id="preview-prestamo" class="chart-wrap" style="margin:14px 0;display:none"></div>
-        <div id="alerta-mora" style="display:none;margin:12px 0;padding:12px;border-radius:10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:var(--danger);font-weight:600"></div>
-        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">💥 Otorgar Préstamo</button>
-      </form>
-    </div>
-    <div class="card glass">
-      <h3>💡 Resumen Rápido</h3>
-      <p class="card-desc">Consejos para evitar errores</p>
-      <ul style="padding-left:18px;color:var(--text-muted);font-size:.9rem;line-height:1.8">
-        <li>Verifica que el documento no tenga mora activa antes de prestar</li>
-        <li>El interés es porcentaje total sobre el monto, no mensual</li>
-        <li>La mora se calcula automáticamente con tasa usura (2.8% mensual aprox)</li>
-        <li>Todos los datos quedan guardados localmente</li>
-      </ul>
-      <div class="chart-wrap" style="margin-top:18px">
-        <h4 style="margin-bottom:10px">Últimos clientes</h4>
-        <div id="lista-ultimos-clientes" style="font-size:.9rem;color:var(--text-muted)">Sin datos aún</div>
-      </div>
-    </div>
-  </div>
+ <div class="grid-2">
+   <div class="card glass">
+     <h2 id="lbl-nuevo-titulo">Crear Nuevo Préstamo</h2>
+     <p class="card-desc" id="lbl-nuevo-desc">Si el documento existe, se agregará como nuevo préstamo al cliente.</p>
+     <form id="form-prestamo" onsubmit="crearPrestamo(event)" novalidate>
+       <div class="form-group"><label>Documento *</label><input type="text" id="cli-doc" placeholder="Ej: 12345678" required pattern=".{3,}" oninput="buscarClienteExistente()"><div id="alerta-cliente-existe" style="display:none;margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.2);font-size:.85rem"></div></div>
+       <div class="grid-2" style="gap:14px"><div class="form-group"><label>Nombre *</label><input type="text" id="cli-nombre" required placeholder="Nombre completo"></div><div class="form-group"><label>Teléfono</label><input type="tel" id="cli-tel" placeholder="300 123 4567"></div></div>
+       <div class="grid-2" style="gap:14px"><div class="form-group"><label>Email</label><input type="email" id="cli-email" placeholder="cliente@email.com"></div><div class="form-group"><label>Dirección de residencia *</label><input type="text" id="cli-direccion" placeholder="Cra 123 #45-67, Barranquilla" required></div></div>
+       <div class="grid-2" style="gap:14px">
+         <div class="form-group"><label>Monto *</label><input type="number" id="cli-monto" required min="1000" step="1000" placeholder="500000" oninput="calcularPreview()"></div>
+         <div class="form-group"><label>Interés mensual % *</label><input type="number" id="cli-interes" required min="0" max="100" step="0.1" placeholder="5" oninput="calcularPreview()"></div><small style="color:var(--text-muted);font-size:.7rem">Se multiplica x meses auto</small></div>
+       <div class="grid-2" style="gap:14px">
+         <div class="form-group"><label>Plazo (meses) *</label><select id="cli-plazo" required onchange="actualizarVencimientoPorMeses(); calcularPreview()"><option value="1">1 mes</option><option value="2">2 meses</option><option value="3">3 meses</option><option value="4">4 meses</option><option value="5">5 meses</option><option value="6">6 meses</option><option value="8">8 meses</option><option value="10">10 meses</option><option value="12">12 meses</option><option value="15">15 meses</option><option value="18">18 meses</option><option value="24">24 meses</option><option value="36">36 meses</option></select><small style="color:var(--text-muted);font-size:.75rem">Cuota: <span id="preview-cuota">-</span></small></div>
+         <div class="form-group"><label>Fecha Vencimiento *</label><input type="date" id="cli-vencimiento" required><small style="color:var(--text-muted);font-size:.75rem">Se calcula automático, editable</small></div>
+       </div>
+       <div id="preview-prestamo" class="chart-wrap" style="margin:14px 0;display:none"></div>
+       <div id="alerta-mora" style="display:none;margin:12px 0;padding:12px;border-radius:10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:var(--danger);font-weight:600"></div>
+       <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">💥 Otorgar Préstamo</button>
+     </form>
+   </div>
+   <div class="card glass">
+     <h3>💡 Resumen Rápido</h3>
+     <p class="card-desc">Consejos para evitar errores</p>
+     <ul style="padding-left:18px;color:var(--text-muted);font-size:.9rem;line-height:1.8">
+       <li>Verifica que el documento no tenga mora activa antes de prestar</li>
+       <li>El interés es porcentaje total sobre el monto, no mensual</li>
+       <li>La mora se calcula automáticamente con tasa usura (2.8% mensual aprox)</li>
+       <li>Todos los datos quedan guardados en Supabase</li>
+     </ul>
+     <div class="chart-wrap" style="margin-top:18px">
+       <h4 style="margin-bottom:10px">Últimos clientes</h4>
+       <div id="lista-ultimos-clientes" style="font-size:.9rem;color:var(--text-muted)">Sin datos aún</div>
+     </div>
+   </div>
+ </div>
 </div>
 
 <!-- ABONOS -->
 <div id="tab-abonos" class="tab-content">
-  <div class="card glass" style="max-width:720px">
-    <h2>Registrar Abono</h2>
-    <p class="card-desc">Selecciona un préstamo activo y registra el pago. Se genera ticket imprimible.</p>
-    <form id="form-abono" onsubmit="registrarAbono(event)">
-      <div class="form-group"><label>Préstamo Activo *</label><select id="select-prestamo-activo" required onchange="mostrarSaldoAbono()"></select></div>
-      <div id="info-saldo-abono" class="chart-wrap" style="display:none;margin-bottom:14px"></div>
-      <div class="form-group"><label>Tipo de pago *</label><div style="display:flex;gap:10px;flex-wrap:wrap"><label style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);padding:10px 12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:8px"><input type="radio" name="tipo-abono" value="cuota" checked onchange="cambiarTipoAbono()"> <span>Cuota del mes (<span id="label-cuota-mes">-</span>)</span></label><label style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);padding:10px 12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:8px"><input type="radio" name="tipo-abono" value="diferente" onchange="cambiarTipoAbono()"> <span>Abono diferente</span></label></div></div>
-      <div class="form-group"><label>Valor Abono *</label><input type="number" id="abono-valor" required min="1000" step="100" placeholder="Ej: 50000"></div>
-      <div id="info-cuota-detalle" style="font-size:.85rem;color:var(--text-muted);background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.15);border-radius:8px;padding:8px 10px;display:none"></div>
-      <button type="submit" class="btn btn-success" style="width:100%">💰 Registrar Abono</button>
-    </form>
-  </div>
+ <div class="card glass" style="max-width:720px">
+   <h2>Registrar Abono</h2>
+   <p class="card-desc">Selecciona un préstamo activo y registra el pago. Se genera ticket imprimible.</p>
+   <form id="form-abono" onsubmit="registrarAbono(event)">
+     <div class="form-group"><label>Préstamo Activo *</label><select id="select-prestamo-activo" required onchange="mostrarSaldoAbono()"></select></div>
+     <div id="info-saldo-abono" class="chart-wrap" style="display:none;margin-bottom:14px"></div>
+     <div class="form-group"><label>Tipo de pago *</label><div style="display:flex;gap:10px;flex-wrap:wrap"><label style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);padding:10px 12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:8px"><input type="radio" name="tipo-abono" value="cuota" checked onchange="cambiarTipoAbono()"> <span>Cuota del mes (<span id="label-cuota-mes">-</span>)</span></label><label style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);padding:10px 12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:8px"><input type="radio" name="tipo-abono" value="diferente" onchange="cambiarTipoAbono()"> <span>Abono diferente</span></label></div></div>
+     <div class="form-group"><label>Valor Abono *</label><input type="number" id="abono-valor" required min="1000" step="100" placeholder="Ej: 50000"></div>
+     <div id="info-cuota-detalle" style="font-size:.85rem;color:var(--text-muted);background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.15);border-radius:8px;padding:8px 10px;display:none"></div>
+     <button type="submit" class="btn btn-success" style="width:100%">💰 Registrar Abono</button>
+   </form>
+ </div>
 </div>
 
 <!-- HISTORIAL -->
 <div id="tab-historial" class="tab-content">
-  <div class="card glass">
-    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
-      <h2>Historial de Clientes</h2>
-      <div style="display:flex;gap:8px"><input type="text" id="buscar-historial" placeholder="Buscar cliente..." style="max-width:300px" oninput="renderizarHistorial()"><button class="btn btn-sm btn-danger" onclick="eliminarTodosClientes()">🗑️ Borrar todo</button></div>
-    </div>
-    <div id="contenedor-historial" style="margin-top:18px"></div>
-  </div>
+ <div class="card glass">
+   <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+     <h2>Historial de Clientes</h2>
+     <div style="display:flex;gap:8px"><input type="text" id="buscar-historial" placeholder="Buscar cliente..." style="max-width:300px" oninput="renderizarHistorial()"><button class="btn btn-sm btn-danger" onclick="eliminarTodosClientes()">🗑️ Borrar todo</button></div>
+   </div>
+   <div id="contenedor-historial" style="margin-top:18px"></div>
+ </div>
 </div>
 
 <!-- MISION VISION -->
 <div id="tab-mision-vision" class="tab-content">
-  <div class="card glass" style="text-align:center;padding:40px 28px">
-    <h2 style="font-size:2rem">Inverkev</h2>
-    <p style="color:var(--text-muted);margin-top:6px">Soluciones financieras con responsabilidad y crecimiento mutuo</p>
-  </div>
-  <div class="mv-grid">
-    <div class="mv-card glass"><h3>🎯 Misión</h3><p>En <strong>Inverkev</strong> brindamos soluciones de crédito accesibles, transparentes y humanas, impulsando el crecimiento financiero de nuestros clientes mediante una gestión responsable, tecnología ágil y acompañamiento cercano. Nos comprometemos a ofrecer préstamos justos, con control de mora bajo parámetros de usura legal y un servicio que prioriza la confianza.</p><ul class="mv-list"><li>Crédito rápido y responsable</li><li>Transparencia total en intereses y mora</li><li>Atención personalizada y seguimiento</li></ul></div>
-    <div class="mv-card glass vision"><h3>🔭 Visión</h3><p>Ser en 2030 la empresa líder en microcrédito en la Costa Caribe colombiana, reconocida por su sistema inteligente de gestión, su cultura de pago responsable y su impacto social. Queremos transformar la experiencia de prestar y cobrar con herramientas digitales que faciliten la vida de nuestros asesores y clientes.</p><ul class="mv-list"><li>Expandirnos a 5 ciudades</li><li>Digitalizar 100% de la cobranza</li><li>Ser referente en educación financiera</li></ul></div>
-  </div>
-  <div class="card glass" style="margin-top:22px">
-    <h3>💎 Valores Corporativos</h3>
-    <div class="grid-3" style="margin-top:16px">
-      <div class="stat"><span>🤝</span><h3 style="font-size:1.2rem">Confianza</h3><small>Base de cada préstamo</small></div>
-      <div class="stat"><span>⚖️</span><h3 style="font-size:1.2rem">Justicia</h3><small>Intereses bajo usura legal</small></div>
-      <div class="stat"><span>🚀</span><h3 style="font-size:1.2rem">Innovación</h3><small>Sistema siempre mejorando</small></div>
-    </div>
-  </div>
+ <div class="card glass" style="text-align:center;padding:40px 28px">
+   <h2 style="font-size:2rem">Inverkev</h2>
+   <p style="color:var(--text-muted);margin-top:6px">Soluciones financieras con responsabilidad y crecimiento mutuo</p>
+ </div>
+ <div class="mv-grid">
+   <div class="mv-card glass"><h3>🎯 Misión</h3><p>En <strong>Inverkev</strong> brindamos soluciones de crédito accesibles, transparentes y humanas, impulsando el crecimiento financiero de nuestros clientes mediante una gestión responsable, tecnología ágil y acompañamiento cercano. Nos comprometemos a ofrecer préstamos justos, con control de mora bajo parámetros de usura legal y un servicio que prioriza la confianza.</p><ul class="mv-list"><li>Crédito rápido y responsable</li><li>Transparencia total en intereses y mora</li><li>Atención personalizada y seguimiento</li></ul></div>
+   <div class="mv-card glass vision"><h3>🔭 Visión</h3><p>Ser en 2030 la empresa líder en microcrédito en la Costa Caribe colombiana, reconocida por su sistema inteligente de gestión, su cultura de pago responsable y su impacto social. Queremos transformar la experiencia de prestar y cobrar con herramientas digitales que faciliten la vida de nuestros asesores y clientes.</p><ul class="mv-list"><li>Expandirnos a 5 ciudades</li><li>Digitalizar 100% de la cobranza</li><li>Ser referente en educación financiera</li></ul></div>
+ </div>
+ <div class="card glass" style="margin-top:22px">
+   <h3>💎 Valores Corporativos</h3>
+   <div class="grid-3" style="margin-top:16px">
+     <div class="stat"><span>🤝</span><h3 style="font-size:1.2rem">Confianza</h3><small>Base de cada préstamo</small></div>
+     <div class="stat"><span>⚖️</span><h3 style="font-size:1.2rem">Justicia</h3><small>Intereses bajo usura legal</small></div>
+     <div class="stat"><span>🚀</span><h3 style="font-size:1.2rem">Innovación</h3><small>Sistema siempre mejorando</small></div>
+   </div>
+ </div>
 </div>
 
 <!-- CALCULADORA -->
 <div id="tab-calculadora" class="tab-content">
-  <div class="grid-2">
-    <div class="card glass">
-      <h2>🧮 Calculadora General</h2>
-      <div class="calc-display" id="calc-display">0</div>
-      <div class="calc-keys">
-        <button onclick="calcClear()">C</button><button onclick="calcDel()">⌫</button><button onclick="calcInput('%')">%</button><button class="op" onclick="calcInput('/')">÷</button>
-        <button onclick="calcInput('7')">7</button><button onclick="calcInput('8')">8</button><button onclick="calcInput('9')">9</button><button class="op" onclick="calcInput('*')">×</button>
-        <button onclick="calcInput('4')">4</button><button onclick="calcInput('5')">5</button><button onclick="calcInput('6')">6</button><button class="op" onclick="calcInput('-')">−</button>
-        <button onclick="calcInput('1')">1</button><button onclick="calcInput('2')">2</button><button onclick="calcInput('3')">3</button><button class="op" onclick="calcInput('+')">+</button>
-        <button onclick="calcInput('0')">0</button><button onclick="calcInput('.')">.</button><button onclick="calcInput('00')">00</button><button class="eq" onclick="calcEquals()">=</button>
-      </div>
-    </div>
-    <div class="card glass">
-      <h2>💳 Calculadora de Préstamos</h2>
-      <p class="card-desc">Calcula cuota, total e interés según monto y plazo</p>
-      <div class="form-group"><label>Monto</label><input type="number" id="calc-monto" placeholder="500000" oninput="calcularCuotaPrestamo()"></div>
-      <div class="grid-2" style="gap:12px"><div class="form-group"><label>Interés mensual %</label><input type="number" id="calc-interes" placeholder="20" oninput="calcularCuotaPrestamo()"></div><div class="form-group"><label>Número de cuotas</label><input type="number" id="calc-cuotas" placeholder="10" value="1" oninput="calcularCuotaPrestamo()"></div></div>
-      <div class="form-group"><label>Modalidad</label><select id="calc-modalidad" onchange="calcularCuotaPrestamo()"><option value="simple">Interés simple (como Inverkev)</option><option value="frances">Francés (interés sobre saldo)</option></select></div>
-      <div id="resultado-calc-prestamo" class="chart-wrap" style="display:none"></div>
-      <div class="action-btns" style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="usarCalculoEnFormulario()">Usar en Nuevo Préstamo</button></div>
-    </div>
-  </div>
+ <div class="grid-2">
+   <div class="card glass">
+     <h2>🧮 Calculadora General</h2>
+     <div class="calc-display" id="calc-display">0</div>
+     <div class="calc-keys">
+       <button onclick="calcClear()">C</button><button onclick="calcDel()">⌫</button><button onclick="calcInput('%')">%</button><button class="op" onclick="calcInput('/')">÷</button>
+       <button onclick="calcInput('7')">7</button><button onclick="calcInput('8')">8</button><button onclick="calcInput('9')">9</button><button class="op" onclick="calcInput('*')">×</button>
+       <button onclick="calcInput('4')">4</button><button onclick="calcInput('5')">5</button><button onclick="calcInput('6')">6</button><button class="op" onclick="calcInput('-')">−</button>
+       <button onclick="calcInput('1')">1</button><button onclick="calcInput('2')">2</button><button onclick="calcInput('3')">3</button><button class="op" onclick="calcInput('+')">+</button>
+       <button onclick="calcInput('0')">0</button><button onclick="calcInput('.')">.</button><button onclick="calcInput('00')">00</button><button class="eq" onclick="calcEquals()">=</button>
+     </div>
+   </div>
+   <div class="card glass">
+     <h2>💳 Calculadora de Préstamos</h2>
+     <p class="card-desc">Calcula cuota, total e interés según monto y plazo</p>
+     <div class="form-group"><label>Monto</label><input type="number" id="calc-monto" placeholder="500000" oninput="calcularCuotaPrestamo()"></div>
+     <div class="grid-2" style="gap:12px"><div class="form-group"><label>Interés mensual %</label><input type="number" id="calc-interes" placeholder="20" oninput="calcularCuotaPrestamo()"></div><div class="form-group"><label>Número de cuotas</label><input type="number" id="calc-cuotas" placeholder="10" value="1" oninput="calcularCuotaPrestamo()"></div></div>
+     <div class="form-group"><label>Modalidad</label><select id="calc-modalidad" onchange="calcularCuotaPrestamo()"><option value="simple">Interés simple (como Inverkev)</option><option value="frances">Francés (interés sobre saldo)</option></select></div>
+     <div id="resultado-calc-prestamo" class="chart-wrap" style="display:none"></div>
+     <div class="action-btns" style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="usarCalculoEnFormulario()">Usar en Nuevo Préstamo</button></div>
+   </div>
+ </div>
 </div>
 
 <!-- NOTAS -->
 <div id="tab-notas" class="tab-content">
-  <div class="grid-2">
-    <div class="card glass"><h2>📝 Nueva Nota</h2><div class="form-group"><label>Título</label><input type="text" id="nota-titulo" placeholder="Ej: Llamar a cliente..."></div><div class="form-group"><label>Contenido</label><textarea id="nota-contenido" placeholder="Escribe tu nota aquí..."></textarea></div><button class="btn btn-primary" style="width:100%" onclick="guardarNota()">💾 Guardar Nota</button></div>
-    <div class="card glass"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2>Mis Notas</h2><button class="btn btn-ghost btn-sm" onclick="borrarTodasNotas()">Borrar todas</button></div><div id="lista-notas"></div></div>
-  </div>
+ <div class="grid-2">
+   <div class="card glass"><h2>📝 Nueva Nota</h2><div class="form-group"><label>Título</label><input type="text" id="nota-titulo" placeholder="Ej: Llamar a cliente..."></div><div class="form-group"><label>Contenido</label><textarea id="nota-contenido" placeholder="Escribe tu nota aquí..."></textarea></div><button class="btn btn-primary" style="width:100%" onclick="guardarNota()">💾 Guardar Nota</button></div>
+   <div class="card glass"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2>Mis Notas</h2><button class="btn btn-ghost btn-sm" onclick="borrarTodasNotas()">Borrar todas</button></div><div id="lista-notas"></div></div>
+ </div>
 </div>
 
 <!-- GRAFICOS -->
 <div id="tab-graficos" class="tab-content">
-  <div class="grid-2">
-    <div class="chart-wrap glass"><h3 style="margin-bottom:12px">📊 Estado de Préstamos</h3><canvas id="chart-estado"></canvas></div>
-    <div class="chart-wrap glass"><h3 style="margin-bottom:12px">💰 Montos por Mes</h3><canvas id="chart-montos"></canvas></div>
-  </div>
-  <div class="grid-2" style="margin-top:20px">
-    <div class="chart-wrap glass"><h3 style="margin-bottom:12px">⚠️ Mora vs Al Día</h3><canvas id="chart-mora"></canvas></div>
-    <div class="chart-wrap glass"><h3 style="margin-bottom:12px">📈 Recaudo vs Saldo</h3><canvas id="chart-recaudo"></canvas></div>
-  </div>
+ <div class="grid-2">
+   <div class="chart-wrap glass"><h3 style="margin-bottom:12px">📊 Estado de Préstamos</h3><canvas id="chart-estado"></canvas></div>
+   <div class="chart-wrap glass"><h3 style="margin-bottom:12px">💰 Montos por Mes</h3><canvas id="chart-montos"></canvas></div>
+ </div>
+ <div class="grid-2" style="margin-top:20px">
+   <div class="chart-wrap glass"><h3 style="margin-bottom:12px">⚠️ Mora vs Al Día</h3><canvas id="chart-mora"></canvas></div>
+   <div class="chart-wrap glass"><h3 style="margin-bottom:12px">📈 Recaudo vs Saldo</h3><canvas id="chart-recaudo"></canvas></div>
+ </div>
 </div>
 
 </div>
 
 <!-- MODALES -->
 <div class="modal-overlay" id="modal-estilo" onclick="if(event.target===this)closeModal('modal-estilo')">
-  <div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h3>🎨 Estilo de la Página</h3><button class="close-x" onclick="closeModal('modal-estilo')">✕</button></div>
-  <div class="modal-body">
-    <div class="form-group"><label>Intensidad de desenfoque (blur)</label><input type="range" id="estilo-blur" min="0" max="30" value="16" oninput="aplicarEstilo()"><small id="blur-val" style="color:var(--text-muted)">16px</small></div>
-    <div class="form-group"><label>Bordes redondeados</label><input type="range" id="estilo-radius" min="8" max="28" value="16" oninput="aplicarEstilo()"><small id="radius-val" style="color:var(--text-muted)">16px</small></div>
-    <div class="form-group"><label>Modo de interfaz</label><select id="estilo-modo" onchange="aplicarEstilo()"><option value="glass">Glassmorphism (original)</option><option value="solid">Sólido oscuro</option><option value="minimal">Minimalista</option></select></div>
-    <div class="form-group"><label>Densidad</label><select id="estilo-densidad" onchange="aplicarEstilo()"><option value="normal">Normal</option><option value="compact">Compacta</option><option value="comfortable">Cómoda</option></select></div>
-  </div><div class="modal-footer"><button class="btn btn-ghost" onclick="resetEstilo()">Restablecer</button><button class="btn btn-primary" onclick="closeModal('modal-estilo')">Listo</button></div></div>
+ <div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h3>🎨 Estilo de la Página</h3><button class="close-x" onclick="closeModal('modal-estilo')">✕</button></div>
+ <div class="modal-body">
+   <div class="form-group"><label>Intensidad de desenfoque (blur)</label><input type="range" id="estilo-blur" min="0" max="30" value="16" oninput="aplicarEstilo()"><small id="blur-val" style="color:var(--text-muted)">16px</small></div>
+   <div class="form-group"><label>Bordes redondeados</label><input type="range" id="estilo-radius" min="8" max="28" value="16" oninput="aplicarEstilo()"><small id="radius-val" style="color:var(--text-muted)">16px</small></div>
+   <div class="form-group"><label>Modo de interfaz</label><select id="estilo-modo" onchange="aplicarEstilo()"><option value="glass">Glassmorphism (original)</option><option value="solid">Sólido oscuro</option><option value="minimal">Minimalista</option></select></div>
+   <div class="form-group"><label>Densidad</label><select id="estilo-densidad" onchange="aplicarEstilo()"><option value="normal">Normal</option><option value="compact">Compacta</option><option value="comfortable">Cómoda</option></select></div>
+ </div><div class="modal-footer"><button class="btn btn-ghost" onclick="resetEstilo()">Restablecer</button><button class="btn btn-primary" onclick="closeModal('modal-estilo')">Listo</button></div></div>
 </div>
 
 <div class="modal-overlay" id="modal-colores" onclick="if(event.target===this)closeModal('modal-colores')">
-  <div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h3>🌈 Colores del Sistema</h3><button class="close-x" onclick="closeModal('modal-colores')">✕</button></div>
-  <div class="modal-body">
-    <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:12px">Manteniendo tu paleta original, puedes ajustar los tonos.</p>
-    <div class="color-row"><div><strong>Primario</strong><br><small style="color:var(--text-muted)">Morado principal #581c87</small></div><input type="color" id="color-primary" class="color-input" value="#581c87" oninput="aplicarColores()"></div>
-    <div class="color-row"><div><strong>Secundario</strong><br><small style="color:var(--text-muted)">Cyan brillante #38bdf8</small></div><input type="color" id="color-secondary" class="color-input" value="#38bdf8" oninput="aplicarColores()"></div>
-    <div class="color-row"><div><strong>Acento</strong><br><small style="color:var(--text-muted)">Violeta #7c3aed</small></div><input type="color" id="color-accent" class="color-input" value="#7c3aed" oninput="aplicarColores()"></div>
-    <div class="color-row"><div><strong>Éxito</strong><br><small style="color:var(--text-muted)">Verde abonos</small></div><input type="color" id="color-success" class="color-input" value="#10b981" oninput="aplicarColores()"></div>
-    <div class="color-row"><div><strong>Peligro</strong><br><small style="color:var(--text-muted)">Rojo mora</small></div><input type="color" id="color-danger" class="color-input" value="#ef4444" oninput="aplicarColores()"></div>
-  </div><div class="modal-footer"><button class="btn btn-ghost" onclick="resetColores()">Restablecer originales</button><button class="btn btn-primary" onclick="closeModal('modal-colores')">Guardar</button></div></div>
+ <div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h3>🌈 Colores del Sistema</h3><button class="close-x" onclick="closeModal('modal-colores')">✕</button></div>
+ <div class="modal-body">
+   <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:12px">Manteniendo tu paleta original, puedes ajustar los tonos.</p>
+   <div class="color-row"><div><strong>Primario</strong><br><small style="color:var(--text-muted)">Morado principal #581c87</small></div><input type="color" id="color-primary" class="color-input" value="#581c87" oninput="aplicarColores()"></div>
+   <div class="color-row"><div><strong>Secundario</strong><br><small style="color:var(--text-muted)">Cyan brillante #38bdf8</small></div><input type="color" id="color-secondary" class="color-input" value="#38bdf8" oninput="aplicarColores()"></div>
+   <div class="color-row"><div><strong>Acento</strong><br><small style="color:var(--text-muted)">Violeta #7c3aed</small></div><input type="color" id="color-accent" class="color-input" value="#7c3aed" oninput="aplicarColores()"></div>
+   <div class="color-row"><div><strong>Éxito</strong><br><small style="color:var(--text-muted)">Verde abonos</small></div><input type="color" id="color-success" class="color-input" value="#10b981" oninput="aplicarColores()"></div>
+   <div class="color-row"><div><strong>Peligro</strong><br><small style="color:var(--text-muted)">Rojo mora</small></div><input type="color" id="color-danger" class="color-input" value="#ef4444" oninput="aplicarColores()"></div>
+ </div><div class="modal-footer"><button class="btn btn-ghost" onclick="resetColores()">Restablecer originales</button><button class="btn btn-primary" onclick="closeModal('modal-colores')">Guardar</button></div></div>
 </div>
 
 <div class="modal-overlay" id="modal-idioma" onclick="if(event.target===this)closeModal('modal-idioma')">
-  <div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h3>🌐 Idioma</h3><button class="close-x" onclick="closeModal('modal-idioma')">✕</button></div>
-  <div class="modal-body">
-    <div class="form-group"><label>Selecciona idioma</label><select id="select-idioma" onchange="cambiarIdioma(this.value)"><option value="es">🇪🇸 Español Latino</option><option value="esES">🇪🇸 Español España</option><option value="en">🇺🇸 English</option><option value="fr">🇫🇷 Français</option><option value="it">🇮🇹 Italiano</option><option value="de">🇩🇪 Deutsch</option><option value="ja">🇯🇵 日本語</option><option value="pt">🇵🇹 Português</option><option value="nl">🇳🇱 Nederlands</option><option value="ko">🇰🇷 한국어</option><option value="ar">🇲🇦 العربية - Marroquí</option><option value="zh">🇨🇳 中文</option></select></div>
-    <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:12px;font-size:.9rem;color:var(--text-muted)">El cambio se aplica instantáneamente a todo el sistema y se guarda automáticamente.</div>
-  </div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal('modal-idioma')">Cerrar</button></div></div>
+ <div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h3>🌐 Idioma</h3><button class="close-x" onclick="closeModal('modal-idioma')">✕</button></div>
+ <div class="modal-body">
+   <div class="form-group"><label>Selecciona idioma</label><select id="select-idioma" onchange="cambiarIdioma(this.value)"><option value="es">🇪🇸 Español Latino</option><option value="esES">🇪🇸 Español España</option><option value="en">🇺🇸 English</option><option value="fr">🇫🇷 Français</option><option value="it">🇮🇹 Italiano</option><option value="de">🇩🇪 Deutsch</option><option value="ja">🇯🇵 日本語</option><option value="pt">🇵🇹 Português</option><option value="nl">🇳🇱 Nederlands</option><option value="ko">🇰🇷 한국어</option><option value="ar">🇲🇦 العربية - Marroquí</option><option value="zh">🇨🇳 中文</option></select></div>
+   <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:12px;font-size:.9rem;color:var(--text-muted)">El cambio se aplica instantáneamente a todo el sistema y se guarda automáticamente.</div>
+ </div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal('modal-idioma')">Cerrar</button></div></div>
 </div>
 
 <div class="notif" id="notificacion"></div>
 <div id="ticket-area"><div id="ticket-contenido"></div></div>
 
 <script>
-// ============================================================
-//  CONFIGURACIÓN DE SUPABASE (CREDENCIALES PROPORCIONADAS)
-// ============================================================
+// ===== CONFIGURACIÓN SUPABASE =====
 const SUPABASE_URL = 'https://wzrwkvyqipyuvofmkggh.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6cndrdnlxaXB5dXZvZm1rZ2doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNTI0MzQsImV4cCI6MjEwMzkyODQzNH0.ouL9m3OSf_nfwyVUQyP8KoTilF9_ezO-F604KIDIGqk';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ============================================================
-//  ESTADO LOCAL Y FUNCIONES DE CARGA / GUARDADO
-// ============================================================
-let db = {
-  clientes: [],
-  notas: [],
-  config: {
-    blur: 16,
-    radius: 16,
-    modo: 'glass',
-    densidad: 'normal',
-    primary: '#581c87',
-    secondary: '#38bdf8',
-    accent: '#7c3aed',
-    success: '#10b981',
-    danger: '#ef4444',
-    idioma: 'es',
-    presupuesto: 10000000
-  }
-};
-
+// ===== BASE DE DATOS Y ESTADO =====
+let db = { clientes: [], notas: [], config:{ blur:16, radius:16, modo:'glass', densidad:'normal', primary:'#581c87', secondary:'#38bdf8', accent:'#7c3aed', success:'#10b981', danger:'#ef4444', idioma:'es', presupuesto:10000000 } };
 let idiomaActual = 'es';
+let calcBuffer = '';
 
-// Carga todos los datos desde Supabase al iniciar
+// Sincronizar datos con Supabase al iniciar
 async function cargarDatosSupabase() {
   try {
-    // 1. Cargar configuración
-    const { data: configData, error: configErr } = await supabase
-      .from('configuracion')
-      .select('*');
-    if (configErr) throw configErr;
-    if (configData && configData.length > 0) {
-      configData.forEach(row => {
-        if (row.clave === 'presupuesto') db.config.presupuesto = row.valor;
-        else if (row.clave === 'idioma') db.config.idioma = row.valor;
-        else if (row.clave === 'blur') db.config.blur = row.valor;
-        else if (row.clave === 'radius') db.config.radius = row.valor;
-        else if (row.clave === 'modo') db.config.modo = row.valor;
-        else if (row.clave === 'densidad') db.config.densidad = row.valor;
-        else if (row.clave === 'primary') db.config.primary = row.valor;
-        else if (row.clave === 'secondary') db.config.secondary = row.valor;
-        else if (row.clave === 'accent') db.config.accent = row.valor;
-        else if (row.clave === 'success') db.config.success = row.valor;
-        else if (row.clave === 'danger') db.config.danger = row.valor;
-      });
+    const { data, error } = await supabaseClient.from('inverkev_data').select('*').limit(1);
+    if(error) {
+      console.error('Error al cargar de Supabase:', error);
+      // Fallback a localStorage si falla la red
+      let local = localStorage.getItem('inverkev_db_v3');
+      if(local) db = JSON.parse(local);
+    } else if(data && data.length > 0 && data[0].payload) {
+      db = data[0].payload;
     } else {
-      // Si no hay config, la creamos con valores por defecto
-      await guardarConfiguracion();
+      // Si la tabla está vacía, intentamos guardar el estado inicial local o por defecto
+      let local = localStorage.getItem('inverkev_db_v3');
+      if(local) db = JSON.parse(local);
+      await guardarDBSupabase();
     }
-
-    // 2. Cargar clientes con sus préstamos y abonos
-    const { data: clientesData, error: clientesErr } = await supabase
-      .from('clientes')
-      .select(`
-        id, doc, nombre, telefono, email, direccion,
-        prestamos (
-          id, monto, interes_mensual, interes_total_pct, plazo_meses,
-          vencimiento, total_pagar, valor_cuota, created_at,
-          abonos ( id, fecha, valor )
-        )
-      `)
-      .order('created_at', { ascending: false });
-    if (clientesErr) throw clientesErr;
-
-    db.clientes = clientesData.map(cli => ({
-      id: cli.id,
-      doc: cli.doc,
-      nombre: cli.nombre,
-      telefono: cli.telefono || '',
-      email: cli.email || '',
-      direccion: cli.direccion || '',
-      prestamos: (cli.prestamos || []).map(p => ({
-        id: p.id,
-        fechaCreacion: p.created_at ? p.created_at.split('T')[0] : '',
-        monto: p.monto,
-        interesMensual: p.interes_mensual,
-        interesTotalPct: p.interes_total_pct,
-        plazoMeses: p.plazo_meses,
-        vencimiento: p.vencimiento,
-        totalPagar: p.total_pagar,
-        valorCuota: p.valor_cuota,
-        abonos: (p.abonos || []).map(a => ({
-          id: a.id,
-          fecha: a.fecha,
-          valor: a.valor
-        }))
-      }))
-    }));
-
-    // 3. Cargar notas
-    const { data: notasData, error: notasErr } = await supabase
-      .from('notas')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (notasErr) throw notasErr;
-    db.notas = notasData.map(n => ({
-      id: n.id,
-      titulo: n.titulo,
-      contenido: n.contenido,
-      fecha: n.created_at ? new Date(n.created_at).toLocaleDateString() : ''
-    }));
-
-    // 4. Aplicar configuraciones visuales
-    aplicarEstilo(false);
-    aplicarColores(false);
-    document.getElementById('select-idioma').value = db.config.idioma || 'es';
-    idiomaActual = db.config.idioma || 'es';
-    actualizarTextosIdioma();
-
-    // 5. Renderizar toda la interfaz
-    renderizarDashboard();
-    renderizarHistorial();
-    actualizarSelectPrestamos();
-    renderizarNotas();
-    renderUltimosClientes();
-    setTimeout(renderizarGraficos, 300);
-
-  } catch (error) {
-    console.error('Error cargando datos desde Supabase:', error);
-    notificar('Error al conectar con la base de datos', 'error');
+  } catch(err) {
+    console.error('Excepción al conectar con Supabase:', err);
+    let local = localStorage.getItem('inverkev_db_v3');
+    if(local) db = JSON.parse(local);
   }
+  if(!db.config.presupuesto) db.config.presupuesto=10000000;
+  idiomaActual = db.config.idioma || 'es';
+  renderizarDashboard(); renderizarHistorial(); actualizarSelectPrestamos(); renderizarNotas(); renderizarGraficos(); renderUltimosClientes();
 }
 
-// Guarda la configuración en Supabase
-async function guardarConfiguracion() {
-  const configItems = [
-    { clave: 'presupuesto', valor: db.config.presupuesto },
-    { clave: 'idioma', valor: db.config.idioma },
-    { clave: 'blur', valor: db.config.blur },
-    { clave: 'radius', valor: db.config.radius },
-    { clave: 'modo', valor: db.config.modo },
-    { clave: 'densidad', valor: db.config.densidad },
-    { clave: 'primary', valor: db.config.primary },
-    { clave: 'secondary', valor: db.config.secondary },
-    { clave: 'accent', valor: db.config.accent },
-    { clave: 'success', valor: db.config.success },
-    { clave: 'danger', valor: db.config.danger }
-  ];
-
-  // Upsert: si existe, actualiza; si no, inserta
-  for (const item of configItems) {
-    const { error } = await supabase
-      .from('configuracion')
-      .upsert({ clave: item.clave, valor: item.valor }, { onConflict: 'clave' });
-    if (error) console.error('Error guardando config:', error);
-  }
-}
-
-// Función principal que reemplaza guardarDB() para sincronizar con Supabase
-async function guardarDB() {
-  // 1. Guardar configuración
-  await guardarConfiguracion();
-
-  // 2. Sincronizar clientes, préstamos y abonos
-  // Nota: Esta función es compleja porque debemos manejar las relaciones.
-  // Usamos un enfoque simple: eliminar y recrear (o usar upsert con relaciones).
-  // Para una app real, es mejor usar transacciones o lógica incremental.
-  // Aquí optamos por un enfoque práctico: borrar todo y volver a insertar.
-  // (Para producción, sería mejor usar triggers o lógica de upsert)
-  // Pero como es una demo, funciona.
-
+async function guardarDBSupabase() {
+  localStorage.setItem('inverkev_db_v3', JSON.stringify(db));
   try {
-    // 2.1 Eliminar todos los abonos, préstamos y clientes (en ese orden por FK)
-    await supabase.from('abonos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('prestamos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('clientes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-
-    // 2.2 Insertar clientes
-    for (const cliente of db.clientes) {
-      const { data: clienteInsert, error: errCli } = await supabase
-        .from('clientes')
-        .insert({
-          doc: cliente.doc,
-          nombre: cliente.nombre,
-          telefono: cliente.telefono,
-          email: cliente.email,
-          direccion: cliente.direccion
-        })
-        .select('id')
-        .single();
-      if (errCli) throw errCli;
-      const clienteId = clienteInsert.id;
-
-      // Insertar préstamos de este cliente
-      for (const prestamo of cliente.prestamos) {
-        const { data: prestamoInsert, error: errPres } = await supabase
-          .from('prestamos')
-          .insert({
-            cliente_id: clienteId,
-            monto: prestamo.monto,
-            interes_mensual: prestamo.interesMensual,
-            interes_total_pct: prestamo.interesTotalPct,
-            plazo_meses: prestamo.plazoMeses,
-            vencimiento: prestamo.vencimiento,
-            total_pagar: prestamo.totalPagar,
-            valor_cuota: prestamo.valorCuota,
-            created_at: prestamo.fechaCreacion || new Date().toISOString()
-          })
-          .select('id')
-          .single();
-        if (errPres) throw errPres;
-        const prestamoId = prestamoInsert.id;
-
-        // Insertar abonos de este préstamo
-        for (const abono of prestamo.abonos) {
-          const { error: errAb } = await supabase
-            .from('abonos')
-            .insert({
-              prestamo_id: prestamoId,
-              fecha: abono.fecha,
-              valor: abono.valor
-            });
-          if (errAb) throw errAb;
-        }
-      }
-    }
-
-    // 2.3 Guardar notas
-    await supabase.from('notas').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    for (const nota of db.notas) {
-      await supabase.from('notas').insert({
-        titulo: nota.titulo,
-        contenido: nota.contenido,
-        created_at: nota.fecha ? new Date(nota.fecha).toISOString() : new Date().toISOString()
-      });
-    }
-
-  } catch (error) {
-    console.error('Error guardando en Supabase:', error);
-    notificar('Error al guardar los datos', 'error');
+    // Upsert usando un ID fijo 'main_state' para mantener un único registro global sincronizado
+    const { error } = await supabaseClient
+      .from('inverkev_data')
+      .upsert({ id: 'main_state', payload: db, updated_at: new Date() });
+    if(error) console.error('Error al guardar en Supabase:', error);
+  } catch(err) {
+    console.error('Excepción al guardar en Supabase:', err);
   }
 }
 
-// ============================================================
-//  FUNCIONES DE NEGOCIO (adaptadas para usar Supabase)
-// ============================================================
+const i18n = {
+ es: {
+   subtitle:'Sistema Avanzado de Crédito', menu:'Menú', principal:'🚀 Principal', empresa:'🏢 Empresa', configuracion:'⚙️ Configuración', herramientas:'🛠️ Herramientas', sesion:'🔒 Sesión',
+   inicio:'Inicio', nuevoPrestamo:'Nuevo Préstamo', registrarAbono:'Registrar Abono', historialClientes:'Historial Clientes', misionVision:'Misión y Visión',
+   estiloPagina:'Estilo de la Página', colores:'Colores', idioma:'Idioma', calculadora:'Calculadora', notas:'Notas', graficos:'Gráficos de Préstamos', cerrarSesion:'Cerrar sesión',
+   totalPrestado:'Total Prestado', totalRecaudado:'Total Recaudado', saldoPendiente:'Saldo Pendiente', clientesActivos:'Clientes Activos', prestamosActivos:'Préstamos Activos', enMora:'En Mora',
+   prestamosActivosTitle:'Préstamos Activos', buscarPlaceholder:'Buscar por nombre, documento o ID...', thCliente:'Cliente', thPrestamo:'Préstamo', thVencimiento:'Vencimiento', thCuotas:'Cuotas', thSaldo:'Saldo', thEstado:'Estado', thAcciones:'Acciones',
+   crearNuevoPrestamo:'Crear Nuevo Préstamo', siDocumentoExiste:'Si el documento existe, se agregará como nuevo préstamo al cliente.', documento:'Documento', nombre:'Nombre', telefono:'Teléfono', email:'Email', direccionResidencia:'Dirección de residencia',
+   monto:'Monto', interesMensual:'Interés mensual %', plazoMeses:'Plazo (meses)', fechaVencimiento:'Fecha Vencimiento', otorgarPrestamo:'Otorgar Préstamo',
+   resumenRapido:'Resumen Rápido', consejos:'Consejos para evitar errores', ultimosClientes:'Últimos clientes',
+   registrarAbonoTitle:'Registrar Abono', prestamoActivo:'Préstamo Activo', tipoPago:'Tipo de pago', cuotaDelMes:'Cuota del mes', abonoDiferente:'Abono diferente', valorAbono:'Valor Abono', registrarAbonoBtn:'Registrar Abono',
+   historialTitle:'Historial de Clientes', buscarCliente:'Buscar cliente...', eliminarHistorial:'Eliminar historial', borrarTodo:'Borrar todo',
+   presupuestoTitulo:'Mi Presupuesto para Prestar', editarPresupuesto:'Editar presupuesto', disponiblePrestar:'Disponible para prestar', gananciaTotal:'Ganancia Total', utilidadCobrada:'Utilidad cobrada',
+   misionTitulo:'Misión', visionTitulo:'Visión', valores:'Valores Corporativos', confianza:'Confianza', justicia:'Justicia', innovacion:'Innovación',
+   calculadoraGeneral:'Calculadora General', calculadoraPrestamos:'Calculadora de Préstamos', nuevaNota:'Nueva Nota', misNotas:'Mis Notas',
+   estadoPrestamos:'Estado de Préstamos', montosPorMes:'Montos por Mes', moraVsAlDia:'Mora vs Al Día', recaudoVsSaldo:'Recaudo vs Saldo'
+ },
+ esES: {
+   subtitle:'Sistema Avanzado de Crédito', menu:'Menú', principal:'🚀 Principal', empresa:'🏢 Empresa', configuracion:'⚙️ Configuración', herramientas:'🛠️ Herramientas', sesion:'🔒 Sesión',
+   inicio:'Inicio', nuevoPrestamo:'Nuevo Préstamo', registrarAbono:'Registrar Abono', historialClientes:'Historial de Clientes', misionVision:'Misión y Visión',
+   estiloPagina:'Estilo de Página', colores:'Colores', idioma:'Idioma', calculadora:'Calculadora', notas:'Notas', graficos:'Gráficos de Préstamos', cerrarSesion:'Cerrar sesión',
+   totalPrestado:'Total Prestado', totalRecaudado:'Total Recaudado', saldoPendiente:'Saldo Pendiente', clientesActivos:'Clientes Activos', prestamosActivos:'Préstamos Activos', enMora:'En Mora',
+   prestamosActivosTitle:'Préstamos Activos', buscarPlaceholder:'Buscar por nombre, DNI o ID...', thCliente:'Cliente', thPrestamo:'Préstamo', thVencimiento:'Vencimiento', thCuotas:'Cuotas', thSaldo:'Saldo', thEstado:'Estado', thAcciones:'Acciones',
+   crearNuevoPrestamo:'Crear Nuevo Préstamo', siDocumentoExiste:'Si el DNI existe, se añadirá como nuevo préstamo.', documento:'DNI', nombre:'Nombre', telefono:'Móvil', email:'Correo', direccionResidencia:'Domicilio',
+   monto:'Importe', interesMensual:'Interés mensual %', plazoMeses:'Plazo (meses)', fechaVencimiento:'Fecha Vencimiento', otorgarPrestamo:'Conceder Préstamo',
+   resumenRapido:'Resumen Rápido', consejos:'Consejos', ultimosClientes:'Últimos clientes',
+   registrarAbonoTitle:'Registrar Abono', prestamoActivo:'Préstamo Activo', tipoPago:'Tipo de pago', cuotaDelMes:'Cuota del mes', abonoDiferente:'Abono diferente', valorAbono:'Importe Abono', registrarAbonoBtn:'Registrar Abono',
+   historialTitle:'Historial de Clientes', buscarCliente:'Buscar cliente...', eliminarHistorial:'Eliminar historial', borrarTodo:'Borrar todo',
+   presupuestoTitulo:'Mi Presupuesto para Prestar', editarPresupuesto:'Editar presupuesto', disponiblePrestar:'Disponible', gananciaTotal:'Ganancia Total', utilidadCobrada:'Beneficio cobrado',
+   misionTitulo:'Misión', visionTitulo:'Visión', valores:'Valores', confianza:'Confianza', justicia:'Justicia', innovacion:'Innovación',
+   calculadoraGeneral:'Calculadora', calculadoraPrestamos:'Calculadora de Préstamos', nuevaNota:'Nueva Nota', misNotas:'Mis Notas',
+   estadoPrestamos:'Estado Préstamos', montosPorMes:'Importes por Mes', moraVsAlDia:'Mora vs Al Día', recaudoVsSaldo:'Recaudo vs Saldo'
+ },
+ en: {
+   subtitle:'Advanced Credit System', menu:'Menu', principal:'🚀 Main', empresa:'🏢 Company', configuracion:'⚙️ Settings', herramientas:'🛠️ Tools', sesion:'🔒 Session',
+   inicio:'Dashboard', nuevoPrestamo:'New Loan', registrarAbono:'Register Payment', historialClientes:'Client History', misionVision:'Mission & Vision',
+   estiloPagina:'Page Style', colores:'Colors', idioma:'Language', calculadora:'Calculator', notas:'Notes', graficos:'Loan Charts', cerrarSesion:'Log out',
+   totalPrestado:'Total Lent', totalRecaudado:'Total Collected', saldoPendiente:'Pending Balance', clientesActivos:'Active Clients', prestamosActivos:'Active Loans', enMora:'Overdue',
+   prestamosActivosTitle:'Active Loans', buscarPlaceholder:'Search by name, ID...', thCliente:'Client', thPrestamo:'Loan', thVencimiento:'Due Date', thCuotas:'Installments', thSaldo:'Balance', thEstado:'Status', thAcciones:'Actions',
+   crearNuevoPrestamo:'Create New Loan', siDocumentoExiste:'If ID exists, new loan will be added to client.', documento:'ID / Document', nombre:'Name', telefono:'Phone', email:'Email', direccionResidencia:'Home Address',
+   monto:'Amount', interesMensual:'Monthly Interest %', plazoMeses:'Term (months)', fechaVencimiento:'Due Date', otorgarPrestamo:'Grant Loan',
+   resumenRapido:'Quick Summary', consejos:'Tips', ultimosClientes:'Recent clients',
+   registrarAbonoTitle:'Register Payment', prestamoActivo:'Active Loan', tipoPago:'Payment type', cuotaDelMes:'Monthly installment', abonoDiferente:'Different payment', valorAbono:'Payment Amount', registrarAbonoBtn:'Register Payment',
+   historialTitle:'Client History', buscarCliente:'Search client...', eliminarHistorial:'Delete history', borrarTodo:'Delete all',
+   presupuestoTitulo:'My Lending Budget', editarPresupuesto:'Edit budget', disponiblePrestar:'Available to lend', gananciaTotal:'Total Profit', utilidadCobrada:'Profit collected',
+   misionTitulo:'Mission', visionTitulo:'Vision', valores:'Core Values', confianza:'Trust', justicia:'Justice', innovacion:'Innovation',
+   calculadoraGeneral:'General Calculator', calculadoraPrestamos:'Loan Calculator', nuevaNota:'New Note', misNotas:'My Notes',
+   estadoPrestamos:'Loan Status', montosPorMes:'Amounts per Month', moraVsAlDia:'Overdue vs On Time', recaudoVsSaldo:'Collected vs Balance'
+ }
+};
 
-// Reemplazar las funciones que modifican el estado local y llaman a guardarDB()
-// Ahora modifican db.clientes y llaman a guardarDB() (que sincroniza con Supabase)
+function t(k){ return (i18n[idiomaActual] && i18n[idiomaActual][k]) || i18n.es[k] || k; }
 
-function crearPrestamo(e) {
-  e.preventDefault();
-  // ... (mismo código de validación)
-  let doc = document.getElementById('cli-doc').value.trim();
-  let nombre = document.getElementById('cli-nombre').value.trim();
-  let tel = document.getElementById('cli-tel').value.trim();
-  let email = document.getElementById('cli-email').value.trim();
-  let direccion = document.getElementById('cli-direccion').value.trim();
-  let monto = parseFloat(document.getElementById('cli-monto').value);
-  let interesMensual = parseFloat(document.getElementById('cli-interes').value);
-  let plazo = parseInt(document.getElementById('cli-plazo').value);
-  let vencimiento = document.getElementById('cli-vencimiento').value;
+function guardarDB(){
+ guardarDBSupabase();
+ renderizarDashboard(); renderizarHistorial(); actualizarSelectPrestamos(); renderizarNotas(); renderizarGraficos(); renderUltimosClientes();
+ document.getElementById('estilo-blur').value = db.config.blur;
+ document.getElementById('estilo-radius').value = db.config.radius;
+ document.getElementById('estilo-modo').value = db.config.modo;
+ document.getElementById('estilo-densidad').value = db.config.densidad;
+ document.getElementById('color-primary').value = db.config.primary;
+ document.getElementById('color-secondary').value = db.config.secondary;
+ document.getElementById('color-accent').value = db.config.accent;
+ document.getElementById('color-success').value = db.config.success;
+ document.getElementById('color-danger').value = db.config.danger;
+ document.getElementById('select-idioma').value = db.config.idioma;
+ aplicarEstilo(false); aplicarColores(false);
+ actualizarTextosIdioma();
+}
 
-  if(!doc || !nombre || !direccion || isNaN(monto) || isNaN(interesMensual) || isNaN(plazo) || !vencimiento) {
-    notificar('Por favor completa todos los campos requeridos', 'error');
-    playSound('error');
-    return;
-  }
+function actualizarTextosIdioma(){
+ const lang = idiomaActual || 'es';
+ const dict = i18n[lang] || i18n.es;
+ const tt = (k)=> dict[k] || i18n.es[k] || k;
 
-  // Verificar cliente existente (en db local)
-  let clienteExistente = db.clientes.find(c => c.doc === doc);
-  if(clienteExistente) {
-    let tieneMora = clienteExistente.prestamos.some(p => {
-      let rec = p.abonos.reduce((a, b) => a + b.valor, 0);
-      let mora = calcularMoraUsura(p);
-      let saldo = (p.totalPagar + mora.interesMora) - rec;
-      return saldo > 0 && mora.diasMora > 0;
-    });
-    if(tieneMora) {
-      if(!confirm('⚠️ Este cliente tiene préstamos en mora. ¿Deseas continuar con el nuevo préstamo?')) {
-        return;
-      }
-    }
-  }
+ let el = document.getElementById('subtitle-header'); if(el) el.textContent = tt('subtitle');
+ el = document.getElementById('menuBtnText'); if(el) el.textContent = tt('menu');
 
-  let interesTotalPct = interesMensual * plazo;
-  let totalPagar = monto + (monto * (interesTotalPct / 100));
-  let valorCuota = totalPagar / plazo;
+ const setText = (id, key) => { let e=document.getElementById(id); if(e) e.textContent=tt(key); };
+ setText('lbl-total-prestado','totalPrestado');
+ setText('lbl-total-recaudado','totalRecaudado');
+ setText('lbl-saldo-pendiente','saldoPendiente');
+ setText('lbl-prestamos-activos','prestamosActivosTitle');
 
-  let nuevoPrestamo = {
-    id: 'L-' + Date.now().toString().slice(-6), // ID local, luego Supabase generará UUID
-    fechaCreacion: new Date().toISOString().split('T')[0],
-    monto,
-    interesMensual,
-    interesTotalPct,
-    plazoMeses: plazo,
-    vencimiento,
-    totalPagar,
-    valorCuota,
-    abonos: []
-  };
+ document.querySelectorAll('.tab-btn').forEach(btn=>{
+   let target=btn.dataset.target;
+   let map={inicio:'inicio', nuevo:'nuevoPrestamo', abonos:'registrarAbono', historial:'historialClientes', calculadora:'calculadora', notas:'notas', graficos:'graficos'};
+   if(map[target]) btn.textContent=tt(map[target]);
+ });
 
-  if(clienteExistente) {
-    clienteExistente.nombre = nombre;
-    clienteExistente.telefono = tel;
-    clienteExistente.email = email;
-    clienteExistente.direccion = direccion;
-    clienteExistente.prestamos.push(nuevoPrestamo);
-  } else {
-    db.clientes.push({
-      id: 'C-' + Date.now(), // ID local
-      doc,
-      nombre,
-      telefono: tel,
-      email,
-      direccion,
-      prestamos: [nuevoPrestamo]
-    });
-  }
+ document.querySelectorAll('[data-i18n]').forEach(el=>{
+   let key=el.dataset.i18n;
+   let txt=tt(key);
+   if(el.querySelector('.ico')){
+     let ico=el.querySelector('.ico').outerHTML;
+     let badge=el.querySelector('.badge-new');
+     let badgeHtml=badge?badge.outerHTML:'';
+     if(el.tagName==='BUTTON' || el.classList.contains('menu-item')){
+       el.innerHTML = ico + ' ' + txt + (badgeHtml? ' '+badgeHtml:'');
+     } else {
+       if(el.classList.contains('menu-section-title')){
+         el.textContent = txt;
+       } else {
+         el.textContent = txt;
+       }
+     }
+   } else {
+     if(el.tagName==='TH' || el.tagName==='SPAN' || el.tagName==='H2' || el.tagName==='H3' || el.tagName==='LABEL' || el.tagName==='BUTTON'){
+       if(el.textContent.trim().length>0) el.textContent = txt;
+     }
+   }
+ });
 
-  guardarDB(); // Sincroniza con Supabase
-  document.getElementById('form-prestamo').reset();
-  actualizarVencimientoPorMeses();
-  document.getElementById('preview-prestamo').style.display = 'none';
-  document.getElementById('alerta-cliente-existe').style.display = 'none';
+ document.querySelectorAll('label').forEach(lbl=>{
+   let txt=lbl.textContent.trim().toLowerCase();
+   if(txt.includes('documento')||txt.includes('dni')||txt.includes('id')) lbl.textContent=tt('documento')+' *';
+   else if(txt.includes('nombre')||txt.includes('name')) lbl.textContent=tt('nombre')+' *';
+   else if(txt.includes('tel')||txt.includes('phone')||txt.includes('móvil')) lbl.textContent=tt('telefono');
+   else if(txt.includes('email')||txt.includes('correo')) lbl.textContent=tt('email');
+   else if(txt.includes('dirección')||txt.includes('domicilio')||txt.includes('address')||txt.includes('adresse')) lbl.textContent=tt('direccionResidencia')+' *';
+   else if(txt.startsWith('monto')||txt.startsWith('importe')||txt.startsWith('amount')||txt.startsWith('valor')&&!txt.includes('abono')) {
+     if(lbl.htmlFor==='cli-monto' || lbl.textContent.toLowerCase().includes('monto')||lbl.textContent.toLowerCase().includes('importe')||lbl.textContent.toLowerCase().includes('amount'))
+       lbl.textContent=tt('monto')+' *';
+   }
+ });
 
-  notificar(`Préstamo otorgado a ${nombre} por ${formatoPeso(monto)}`, 'success');
-  playSound('cliente');
-  lanzarConfeti('cliente');
-  switchTab('inicio');
+ let busc=document.getElementById('buscar-global'); if(busc) busc.placeholder=tt('buscarPlaceholder');
+ let buscH=document.getElementById('buscar-historial'); if(buscH) buscH.placeholder=tt('buscarCliente');
+
+ document.querySelectorAll('.modal-header h3').forEach(h=>{
+   let t=h.textContent.toLowerCase();
+   if(t.includes('estilo')) h.textContent='🎨 '+tt('estiloPagina');
+   else if(t.includes('color')) h.textContent='🌈 '+tt('colores');
+   else if(t.includes('idioma')||t.includes('language')||t.includes('langue')) h.textContent='🌐 '+tt('idioma');
+ });
+
+ renderizarDashboard();
+ renderizarHistorial();
+}
+
+function formatoPeso(n){ return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(n||0); }
+
+function calcularMoraUsura(p){
+ if(!p.vencimiento) return {diasMora:0, interesMora:0};
+ let hoy = new Date(); hoy.setHours(0,0,0,0);
+ let venc = new Date(p.vencimiento+'T00:00:00'); venc.setHours(0,0,0,0);
+ if(isNaN(venc)) return {diasMora:0, interesMora:0};
+ let pagado = p.abonos.reduce((a,b)=>a+b.valor,0);
+ let saldoPend = p.totalPagar - pagado;
+ if(saldoPend <= 0) return {diasMora:0, interesMora:0};
+ if(hoy <= venc) return {diasMora:0, interesMora:0};
+ let diff = Math.floor((hoy - venc)/(1000*60*60*24));
+ let tasaDiaria = 0.0008;
+ let interesMora = saldoPend * tasaDiaria * diff;
+ return {diasMora:diff, interesMora: Math.round(interesMora)};
+}
+
+function switchTab(id, btn){
+ document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+ let target = document.getElementById('tab-'+id);
+ if(target) target.classList.add('active');
+ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+ let tabBtn = document.querySelector(`.tab-btn[data-target="${id}"]`);
+ if(tabBtn) tabBtn.classList.add('active');
+ document.querySelectorAll('.menu-item[data-tab]').forEach(m=>m.classList.remove('active'));
+ let menuItem = document.querySelector(`.menu-item[data-tab="${id}"]`);
+ if(menuItem) menuItem.classList.add('active');
+ if(btn && btn.classList.contains('tab-btn')) btn.classList.add('active');
+ if(btn && btn.classList.contains('menu-item')) btn.classList.add('active');
+ if(id==='graficos') setTimeout(renderizarGraficos,120);
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function toggleMenu(){ document.getElementById('dropdownMenu').classList.toggle('active'); }
+function closeMenu(){ document.getElementById('dropdownMenu').classList.remove('active'); }
+document.addEventListener('click', e=>{ if(!e.target.closest('.menu-wrapper')) closeMenu(); });
+
+function openModal(id){ document.getElementById(id).classList.add('active'); }
+function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+
+function notificar(msg, tipo='success'){
+ let n = document.getElementById('notificacion');
+ n.textContent = msg; n.className = 'notif show '+tipo;
+ setTimeout(()=>n.classList.remove('show'),3500);
+}
+
+function actualizarVencimientoPorMeses(){
+ let select = document.getElementById('cli-plazo');
+ if(!select) return;
+ let meses = parseInt(select.value) || 1;
+ if(isNaN(meses)||meses<1) meses=1;
+ let hoy = new Date();
+ let venc = new Date(hoy);
+ venc.setMonth(venc.getMonth()+meses);
+ let iso = venc.toISOString().split('T')[0];
+ let inputVenc = document.getElementById('cli-vencimiento');
+ if(inputVenc) inputVenc.value = iso;
+ calcularPreview();
+}
+
+function cambiarTipoAbono(){
+ let tipoEl = document.querySelector('input[name="tipo-abono"]:checked');
+ let tipo = tipoEl ? tipoEl.value : 'cuota';
+ let inputValor = document.getElementById('abono-valor');
+ let id = document.getElementById('select-prestamo-activo').value;
+ if(!id) return;
+ for(let c of db.clientes){
+   let p=c.prestamos.find(x=>x.id===id);
+   if(p){
+     let cuota = p.valorCuota || (p.totalPagar / (p.plazoMeses||1));
+     if(tipo==='cuota'){
+       inputValor.value = Math.round(cuota);
+     } else {
+       if(!inputValor.value) inputValor.placeholder = 'Ingresa el monto';
+     }
+     return;
+   }
+ }
+}
+
+function editarPresupuesto(){
+ let actual = db.config.presupuesto||0;
+ let overlay=document.createElement('div');
+ overlay.className='modal-overlay active';
+ overlay.id='modal-presupuesto-temp';
+ overlay.innerHTML=`<div class="modal" style="max-width:420px" onclick="event.stopPropagation()"><div class="modal-header"><h3>💼 Editar Presupuesto</h3><button class="close-x" onclick="document.getElementById('modal-presupuesto-temp').remove()">✕</button></div>
+ <div class="modal-body">
+   <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:12px">Tu presupuesto actual es <strong style="color:var(--secondary)">${formatoPeso(actual)}</strong><br>Disponible: <strong>${formatoPeso((actual - (function(){ let tot=0; db.clientes.forEach(c=>c.prestamos.forEach(p=>{tot+=p.monto})); return tot; })() + (function(){ let r=0; db.clientes.forEach(c=>c.prestamos.forEach(p=>{r+=p.abonos.reduce((a,b)=>a+b.valor,0)})); return r; })()))}</strong></p>
+   <div class="form-group"><label>Nuevo presupuesto total para prestar</label><input type="number" id="input-nuevo-presupuesto" value="${actual}" min="0" step="100000" placeholder="10000000" style="font-size:1.2rem;font-weight:700"></div>
+   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+     <button class="btn btn-ghost btn-sm" onclick="document.getElementById('input-nuevo-presupuesto').value=5000000">5M</button>
+     <button class="btn btn-ghost btn-sm" onclick="document.getElementById('input-nuevo-presupuesto').value=10000000">10M</button>
+     <button class="btn btn-ghost btn-sm" onclick="document.getElementById('input-nuevo-presupuesto').value=20000000">20M</button>
+   </div>
+   <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:10px 12px;margin-top:12px;font-size:0.85rem;color:var(--text-muted)">
+     💡 <strong>Tip:</strong> Si aumentas el presupuesto, podrás seguir prestando más aunque tengas préstamos activos.<br>Si lo bajas, solo afecta el cálculo de disponible.
+   </div>
+ </div>
+ <div class="modal-footer"><button class="btn btn-ghost" onclick="document.getElementById('modal-presupuesto-temp').remove()">Cancelar</button><button class="btn btn-primary" onclick="confirmarPresupuesto()">💾 Guardar</button></div></div>`;
+ document.body.appendChild(overlay);
+ setTimeout(()=>{ let inp=document.getElementById('input-nuevo-presupuesto'); if(inp){ inp.focus(); inp.select(); } },100);
+}
+
+function confirmarPresupuesto(){
+ let inp=document.getElementById('input-nuevo-presupuesto');
+ if(!inp) return;
+ let val=parseFloat(inp.value);
+ if(isNaN(val) || val<0){ notificar('Valor inválido','error'); playSound('error'); return; }
+ db.config.presupuesto=val;
+ guardarDB();
+ renderizarDashboard();
+ let modal=document.getElementById('modal-presupuesto-temp');
+ if(modal) modal.remove();
+ notificar('💼 Presupuesto actualizado a '+formatoPeso(val),'success');
+ lanzarConfeti('cliente');
+ playSound('cliente');
+}
+
+// ===== SONIDOS Y SINTETIZADOR =====
+let audioCtx=null;
+function getAudioCtx(){
+ if(!audioCtx){
+   try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
+ }
+ if(audioCtx.state==='suspended') audioCtx.resume();
+ return audioCtx;
+}
+
+function playTone(freq, duration, type='sine', volume=0.3, delay=0){
+ let ctx=getAudioCtx(); if(!ctx) return;
+ setTimeout(()=>{
+   let osc=ctx.createOscillator();
+   let gain=ctx.createGain();
+   osc.type=type;
+   osc.frequency.value=freq;
+   osc.connect(gain);
+   gain.connect(ctx.destination);
+   gain.gain.setValueAtTime(0, ctx.currentTime);
+   gain.gain.linearRampToValueAtTime(volume, ctx.currentTime+0.02);
+   gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+duration);
+   osc.start(ctx.currentTime);
+   osc.stop(ctx.currentTime+duration);
+ }, delay);
+}
+
+function playSound(tipo){
+ let muted = localStorage.getItem('inverkev_muted')==='1';
+ if(muted) return;
+ if(tipo === 'abono' || tipo === 'caja'){
+   playTone(987, 0.1, 'triangle', 0.3, 0);
+   playTone(1318, 0.12, 'sine', 0.35, 80);
+   playTone(1760, 0.15, 'sine', 0.4, 160);
+   playTone(2637, 0.25, 'sine', 0.45, 240);
+ } else if(tipo === 'cliente' || tipo === 'success'){
+   playTone(523.25, 0.1, 'sine', 0.3, 0);
+   playTone(659.25, 0.1, 'sine', 0.3, 80);
+   playTone(783.99, 0.1, 'sine', 0.3, 160);
+   playTone(1046.50, 0.2, 'sine', 0.35, 240);
+ } else if(tipo === 'error'){
+   playTone(220, 0.15, 'sawtooth', 0.3, 0);
+   playTone(180, 0.25, 'sawtooth', 0.3, 120);
+ } else if(tipo === 'click'){
+   playTone(800, 0.03, 'sine', 0.1, 0);
+ }
+}
+
+function toggleSonido(){
+ let muted = localStorage.getItem('inverkev_muted')==='1';
+ localStorage.setItem('inverkev_muted', muted ? '0' : '1');
+ let btn = document.getElementById('btn-sonido');
+ if(btn) btn.textContent = muted ? '🔊 Sonido' : '🔇 Mudo';
+ notificar(muted ? 'Sonido activado' : 'Sonido desactivado', 'success');
+}
+
+// ===== PWA INSTALLATION =====
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+ e.preventDefault();
+ deferredPrompt = e;
+ let btn = document.getElementById('btn-instalar-pwa');
+ if(btn) btn.style.display = 'inline-flex';
+});
+
+function instalarPWA(){
+ if(deferredPrompt){
+   deferredPrompt.prompt();
+   deferredPrompt.userChoice.then((choiceResult) => {
+     if (choiceResult.outcome === 'accepted') {
+       notificar('¡Gracias por instalar Inverkev!', 'success');
+     }
+     deferredPrompt = null;
+     document.getElementById('btn-instalar-pwa').style.display = 'none';
+   });
+ }
+}
+
+// ===== AUTH / LOGIN =====
+const DEFAULT_PASS_HASH = '3ea6bbed16fbdb0f49692c52a1cc0df700ee7750dcecdc15465d47edfc8990b7';
+
+async function hashString(str) {
+ const encoder = new TextEncoder();
+ const data = encoder.encode(str);
+ const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+ const hashArray = Array.from(new Uint8Array(hashBuffer));
+ return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function intentarLogin() {
+ let passInput = document.getElementById('login-pass');
+ let errDiv = document.getElementById('login-error');
+ if(!passInput) return;
+ let val = passInput.value;
+ if(!val) {
+   errDiv.textContent = 'Por favor ingresa tu contraseña';
+   errDiv.classList.add('show');
+   return;
+ }
+ let hash = await hashString(val);
+ let savedHash = localStorage.getItem('inverkev_pass_hash') || DEFAULT_PASS_HASH;
+ if(hash === savedHash) {
+   sessionStorage.setItem('inverkev_logged_in', 'true');
+   document.getElementById('login-overlay').classList.add('hidden');
+   notificar('Bienvenido a Inverkev', 'success');
+   playSound('cliente');
+ } else {
+   errDiv.textContent = 'Contraseña incorrecta';
+   errDiv.classList.add('show');
+   playSound('error');
+ }
+}
+
+function togglePass() {
+ let inp = document.getElementById('login-pass');
+ if(inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function cerrarSesion() {
+ sessionStorage.removeItem('inverkev_logged_in');
+ document.getElementById('login-overlay').classList.remove('hidden');
+ let passInput = document.getElementById('login-pass');
+ if(passInput) passInput.value = '';
+ notificar('Sesión cerrada', 'success');
+}
+
+// ===== DASHBOARD RENDERING =====
+function renderizarDashboard() {
+ let filtro = (document.getElementById('buscar-global')?.value || '').toLowerCase();
+ let totalPrestado = 0;
+ let totalRecaudado = 0;
+ let totalCapital = 0;
+ let totalGanancia = 0;
+ let clientesActivosSet = new Set();
+ let prestamosActivosCount = 0;
+ let moraCount = 0;
+ let totalUtilidadCobrada = 0;
+
+ let tbody = document.getElementById('tabla-prestamos');
+ if(!tbody) return;
+ tbody.innerHTML = '';
+
+ db.clientes.forEach(cliente => {
+   cliente.prestamos.forEach(p => {
+     let rec = p.abonos.reduce((a, b) => a + b.valor, 0);
+     let moraInfo = calcularMoraUsura(p);
+     let saldo = (p.totalPagar + moraInfo.interesMora) - rec;
+     let pagadoTotal = saldo <= 0;
+
+     if (!pagadoTotal) {
+       prestamosActivosCount++;
+       clientesActivosSet.add(cliente.doc);
+       if (moraInfo.diasMora > 0) moraCount++;
+     }
+
+     totalCapital += p.monto;
+     totalGanancia += (p.totalPagar - p.monto);
+     totalPrestado += p.totalPagar;
+     totalRecaudado += rec;
+
+     let propInteres = p.totalPagar > 0 ? (p.totalPagar - p.monto) / p.totalPagar : 0;
+     totalUtilidadCobrada += Math.round(rec * propInteres);
+
+     let coincide = cliente.nombre.toLowerCase().includes(filtro) ||
+                      cliente.doc.toLowerCase().includes(filtro) ||
+                      p.id.toLowerCase().includes(filtro);
+
+     if (coincide) {
+       let tr = document.createElement('tr');
+       if (pagadoTotal) tr.className = 'row-pagado';
+
+       let cuotasPagadas = Math.floor(rec / (p.valorCuota || 1));
+       let totalCuotas = p.plazoMeses || 1;
+
+       let estadoBadge = pagadoTotal
+         ? `<span class="badge-pagado-verde">✅ Pagado</span>`
+         : moraInfo.diasMora > 0
+           ? `<span class="mora-badge">⚠️ Mora ${moraInfo.diasMora}d (+${formatoPeso(moraInfo.interesMora)})</span>`
+           : `<span class="ok-badge">🟢 Al día</span>`;
+
+       tr.innerHTML = `
+         <td><strong>${cliente.nombre}</strong><br><small style="color:var(--text-muted)">Doc: ${cliente.doc}</small></td>
+         <td><strong>${formatoPeso(p.monto)}</strong><br><small style="color:var(--text-muted)">Total: ${formatoPeso(p.totalPagar)}</small></td>
+         <td>${p.vencimiento || '-'}</td>
+         <td>${cuotasPagadas} / ${totalCuotas}</td>
+         <td><strong style="color:${saldo > 0 ? 'var(--secondary)' : 'var(--success)'}">${formatoPeso(Math.max(0, saldo))}</strong></td>
+         <td>${estadoBadge}</td>
+         <td>
+           <div class="action-btns">
+             ${!pagadoTotal ? `<button class="btn btn-sm btn-success" onclick="seleccionarYIrAbono('${p.id}')">💰 Abono</button>` : ''}
+             <button class="btn btn-sm btn-ghost" onclick="reimprimirUltimoTicket('${p.id}')">🧾 Ticket</button>
+             <button class="btn btn-sm btn-danger" onclick="eliminarPrestamo('${cliente.doc}', '${p.id}')">🗑️</button>
+           </div>
+         </td>
+       `;
+       tbody.appendChild(tr);
+     }
+   });
+ });
+
+ let presc = db.config.presupuesto || 10000000;
+ let disponible = presc - totalCapital + totalRecaudado;
+
+ let elPres = document.getElementById('stat-presupuesto'); if(elPres) elPres.textContent = formatoPeso(presc);
+ let elDisp = document.getElementById('stat-disponible'); if(elDisp) elDisp.textContent = formatoPeso(disponible);
+ let elGan = document.getElementById('stat-ganancia'); if(elGan) elGan.textContent = formatoPeso(totalGanancia);
+ let elUtil = document.getElementById('stat-utilidad-cobrada'); if(elUtil) elUtil.textContent = formatoPeso(totalUtilidadCobrada);
+ let elPrest = document.getElementById('stat-prestado'); if(elPrest) elPrest.textContent = formatoPeso(totalPrestado);
+ let elRec = document.getElementById('stat-recaudado'); if(elRec) elRec.textContent = formatoPeso(totalRecaudado);
+ let elSal = document.getElementById('stat-saldo'); if(elSal) elSal.textContent = formatoPeso(Math.max(0, totalPrestado - totalRecaudado));
+
+ let elCli = document.getElementById('stat-clientes'); if(elCli) elCli.textContent = clientesActivosSet.size;
+ let elAct = document.getElementById('stat-prestamos-activos'); if(elAct) elAct.textContent = prestamosActivosCount;
+ let elMor = document.getElementById('stat-mora'); if(elMor) elMor.textContent = moraCount;
+}
+
+// ===== CREACION DE PRESTAMOS =====
+function buscarClienteExistente(){
+ let doc = document.getElementById('cli-doc').value.trim();
+ let divAlerta = document.getElementById('alerta-cliente-existe');
+ if(!doc) { divAlerta.style.display = 'none'; return; }
+ let cliente = db.clientes.find(c => c.doc === doc);
+ if(cliente) {
+   document.getElementById('cli-nombre').value = cliente.nombre;
+   document.getElementById('cli-tel').value = cliente.telefono || '';
+   document.getElementById('cli-email').value = cliente.email || '';
+   document.getElementById('cli-direccion').value = cliente.direccion || '';
+   divAlerta.style.display = 'block';
+   divAlerta.innerHTML = `💡 Cliente existente con <strong>${cliente.prestamos.length}</strong> préstamo(s). Se añadirá un nuevo préstamo a su historial.`;
+ } else {
+   divAlerta.style.display = 'none';
+ }
+}
+
+function calcularPreview(){
+ let monto = parseFloat(document.getElementById('cli-monto').value) || 0;
+ let interesMensual = parseFloat(document.getElementById('cli-interes').value) || 0;
+ let plazo = parseInt(document.getElementById('cli-plazo').value) || 1;
+
+ let interesTotalPct = interesMensual * plazo;
+ let interesMonto = monto * (interesTotalPct / 100);
+ let totalPagar = monto + interesMonto;
+ let cuotaMensual = totalPagar / plazo;
+
+ let spanCuota = document.getElementById('preview-cuota');
+ if(spanCuota) spanCuota.textContent = formatoPeso(cuotaMensual) + ' / mes';
+
+ let prevDiv = document.getElementById('preview-prestamo');
+ if(prevDiv && monto > 0) {
+   prevDiv.style.display = 'block';
+   prevDiv.innerHTML = `
+     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+       <div><small style="color:var(--text-muted)">Subtotal Capital</small><br><strong>${formatoPeso(monto)}</strong></div>
+       <div><small style="color:var(--text-muted)">Interés Total (${interesTotalPct.toFixed(1)}%)</small><br><strong style="color:var(--secondary)">+${formatoPeso(interesMonto)}</strong></div>
+       <div><small style="color:var(--text-muted)">Total a Pagar</small><br><strong style="color:var(--success)">${formatoPeso(totalPagar)}</strong></div>
+     </div>
+   `;
+ } else if(prevDiv) {
+   prevDiv.style.display = 'none';
+ }
+}
+
+function crearPrestamo(e){
+ e.preventDefault();
+ let doc = document.getElementById('cli-doc').value.trim();
+ let nombre = document.getElementById('cli-nombre').value.trim();
+ let tel = document.getElementById('cli-tel').value.trim();
+ let email = document.getElementById('cli-email').value.trim();
+ let direccion = document.getElementById('cli-direccion').value.trim();
+ let monto = parseFloat(document.getElementById('cli-monto').value);
+ let interesMensual = parseFloat(document.getElementById('cli-interes').value);
+ let plazo = parseInt(document.getElementById('cli-plazo').value);
+ let vencimiento = document.getElementById('cli-vencimiento').value;
+
+ if(!doc || !nombre || !direccion || isNaN(monto) || isNaN(interesMensual) || isNaN(plazo) || !vencimiento) {
+   notificar('Por favor completa todos los campos requeridos', 'error');
+   playSound('error');
+   return;
+ }
+
+ let clienteExistente = db.clientes.find(c => c.doc === doc);
+ if(clienteExistente) {
+   let tieneMora = clienteExistente.prestamos.some(p => {
+     let rec = p.abonos.reduce((a, b) => a + b.valor, 0);
+     let mora = calcularMoraUsura(p);
+     let saldo = (p.totalPagar + mora.interesMora) - rec;
+     return saldo > 0 && mora.diasMora > 0;
+   });
+   if(tieneMora) {
+     if(!confirm('⚠️ Este cliente tiene préstamos en mora. ¿Deseas continuar con el nuevo préstamo?')) {
+       return;
+     }
+   }
+ }
+
+ let interesTotalPct = interesMensual * plazo;
+ let totalPagar = monto + (monto * (interesTotalPct / 100));
+ let valorCuota = totalPagar / plazo;
+
+ let nuevoPrestamo = {
+   id: 'L-' + Date.now().toString().slice(-6),
+   fechaCreacion: new Date().toISOString().split('T')[0],
+   monto,
+   interesMensual,
+   interesTotalPct,
+   plazoMeses: plazo,
+   vencimiento,
+   totalPagar,
+   valorCuota,
+   abonos: []
+ };
+
+ let cliente = db.clientes.find(c => c.doc === doc);
+ if(cliente) {
+   cliente.nombre = nombre;
+   cliente.telefono = tel;
+   cliente.email = email;
+   cliente.direccion = direccion;
+   cliente.prestamos.push(nuevoPrestamo);
+ } else {
+   db.clientes.push({
+     doc,
+     nombre,
+     telefono: tel,
+     email,
+     direccion,
+     prestamos: [nuevoPrestamo]
+   });
+ }
+
+ guardarDB();
+ document.getElementById('form-prestamo').reset();
+ actualizarVencimientoPorMeses();
+ document.getElementById('preview-prestamo').style.display = 'none';
+ document.getElementById('alerta-cliente-existe').style.display = 'none';
+
+ notificar(`Préstamo otorgado a ${nombre} por ${formatoPeso(monto)}`, 'success');
+ playSound('cliente');
+ lanzarConfeti('cliente');
+ switchTab('inicio');
+}
+
+// ===== REGISTRO DE ABONOS =====
+function actualizarSelectPrestamos(){
+ let select = document.getElementById('select-prestamo-activo');
+ if(!select) return;
+ select.innerHTML = '<option value="">-- Selecciona un préstamo --</option>';
+
+ db.clientes.forEach(c => {
+   c.prestamos.forEach(p => {
+     let rec = p.abonos.reduce((a, b) => a + b.valor, 0);
+     let moraInfo = calcularMoraUsura(p);
+     let saldo = (p.totalPagar + moraInfo.interesMora) - rec;
+     if(saldo > 0) {
+       let opt = document.createElement('option');
+       opt.value = p.id;
+       opt.textContent = `${c.nombre} (${c.doc}) - Saldo: ${formatoPeso(saldo)} [ID: ${p.id}]`;
+       select.appendChild(opt);
+     }
+   });
+ });
+}
+
+function mostrarSaldoAbono(){
+ let id = document.getElementById('select-prestamo-activo').value;
+ let infoDiv = document.getElementById('info-saldo-abono');
+ let labelCuota = document.getElementById('label-cuota-mes');
+ let inputValor = document.getElementById('abono-valor');
+ let tipoEl = document.querySelector('input[name="tipo-abono"]:checked');
+ let tipo = tipoEl ? tipoEl.value : 'cuota';
+
+ if(!id) {
+   if(infoDiv) infoDiv.style.display = 'none';
+   if(labelCuota) labelCuota.textContent = '-';
+   return;
+ }
+
+ for(let c of db.clientes) {
+   let p = c.prestamos.find(x => x.id === id);
+   if(p) {
+     let rec = p.abonos.reduce((a, b) => a + b.valor, 0);
+     let moraInfo = calcularMoraUsura(p);
+     let saldo = (p.totalPagar + moraInfo.interesMora) - rec;
+     let cuota = p.valorCuota || (p.totalPagar / p.plazoMeses);
+
+     if(labelCuota) labelCuota.textContent = formatoPeso(cuota);
+
+     if(tipo === 'cuota' && inputValor) {
+       inputValor.value = Math.round(cuota);
+     } else if(tipo === 'diferente' && inputValor) {
+       if(!inputValor.value) inputValor.placeholder = 'Ingresa el monto';
+     }
+
+     if(infoDiv) {
+       infoDiv.style.display = 'block';
+       infoDiv.innerHTML = `
+         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+           <div><small style="color:var(--text-muted)">Cliente</small><br><strong>${c.nombre}</strong></div>
+           <div><small style="color:var(--text-muted)">Total Pagar</small><br><strong>${formatoPeso(p.totalPagar)}</strong></div>
+           <div><small style="color:var(--text-muted)">Saldo Actual</small><br><strong style="color:var(--secondary)">${formatoPeso(saldo)}</strong></div>
+         </div>
+         ${moraInfo.diasMora > 0 ? `<div style="margin-top:10px;color:var(--danger);font-size:0.85rem">⚠️ Incluye ${moraInfo.diasMora} días de mora (+${formatoPeso(moraInfo.interesMora)})</div>` : ''}
+       `;
+     }
+     return;
+   }
+ }
+}
+
+function seleccionarYIrAbono(prestamoId) {
+ switchTab('abonos');
+ let select = document.getElementById('select-prestamo-activo');
+ if(select) {
+   select.value = prestamoId;
+   mostrarSaldoAbono();
+ }
 }
 
 function registrarAbono(e) {
-  e.preventDefault();
-  let id = document.getElementById('select-prestamo-activo').value;
-  let valor = parseFloat(document.getElementById('abono-valor').value);
+ e.preventDefault();
+ let id = document.getElementById('select-prestamo-activo').value;
+ let valor = parseFloat(document.getElementById('abono-valor').value);
 
-  if(!id || isNaN(valor) || valor <= 0) {
-    notificar('Por favor selecciona un préstamo e ingresa un valor válido', 'error');
-    playSound('error');
-    return;
-  }
+ if(!id || isNaN(valor) || valor <= 0) {
+   notificar('Por favor selecciona un préstamo e ingresa un valor válido', 'error');
+   playSound('error');
+   return;
+ }
 
-  let clienteEncontrado = null;
-  let prestamoEncontrado = null;
+ let clienteEncontrado = null;
+ let prestamoEncontrado = null;
 
-  for(let c of db.clientes) {
-    let p = c.prestamos.find(x => x.id === id);
-    if(p) {
-      clienteEncontrado = c;
-      prestamoEncontrado = p;
-      break;
-    }
-  }
+ for(let c of db.clientes) {
+   let p = c.prestamos.find(x => x.id === id);
+   if(p) {
+     clienteEncontrado = c;
+     prestamoEncontrado = p;
+     break;
+   }
+ }
 
-  if(!clienteEncontrado || !prestamoEncontrado) return;
+ if(!clienteEncontrado || !prestamoEncontrado) return;
 
-  let rec = prestamoEncontrado.abonos.reduce((a, b) => a + b.valor, 0);
-  let moraInfo = calcularMoraUsura(prestamoEncontrado);
-  let saldoActual = (prestamoEncontrado.totalPagar + moraInfo.interesMora) - rec;
-  
-  if(valor > saldoActual) {
-    notificar(`El abono (${formatoPeso(valor)}) supera el saldo pendiente (${formatoPeso(saldoActual)})`, 'error');
-    playSound('error');
-    return;
-  }
+ let rec = prestamoEncontrado.abonos.reduce((a, b) => a + b.valor, 0);
+ let moraInfo = calcularMoraUsura(prestamoEncontrado);
+ let saldoActual = (prestamoEncontrado.totalPagar + moraInfo.interesMora) - rec;
 
-  let nuevoAbono = {
-    id: 'A-' + Date.now().toString().slice(-6),
-    fecha: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    valor
-  };
+ if(valor > saldoActual) {
+   notificar(`El abono (${formatoPeso(valor)}) supera el saldo pendiente (${formatoPeso(saldoActual)})`, 'error');
+   playSound('error');
+   return;
+ }
 
-  prestamoEncontrado.abonos.push(nuevoAbono);
-  guardarDB();
+ let nuevoAbono = {
+   id: 'A-' + Date.now().toString().slice(-6),
+   fecha: new Date().toISOString().replace('T', ' ').slice(0, 19),
+   valor
+ };
 
-  let nuevoSaldo = saldoActual - valor;
+ prestamoEncontrado.abonos.push(nuevoAbono);
+ guardarDB();
 
-  if(nuevoSaldo <= 0) {
-    notificar(`🎉 ¡Préstamo ${prestamoEncontrado.id} cancelado en su totalidad!`, 'success');
-    lanzarConfeti('pagado');
-  } else {
-    notificar(`Abono registrado: ${formatoPeso(valor)}. Saldo restante: ${formatoPeso(nuevoSaldo)}`, 'success');
-  }
+ let nuevoSaldo = saldoActual - valor;
 
-  playSound('abono');
-  imprimirTicket(clienteEncontrado, prestamoEncontrado, nuevoAbono, nuevoSaldo);
-  document.getElementById('form-abono').reset();
-  document.getElementById('info-saldo-abono').style.display = 'none';
+ if(nuevoSaldo <= 0) {
+   notificar(`🎉 ¡Préstamo ${prestamoEncontrado.id} cancelado en su totalidad!`, 'success');
+   lanzarConfeti('pagado');
+ } else {
+   notificar(`Abono registrado: ${formatoPeso(valor)}. Saldo restante: ${formatoPeso(nuevoSaldo)}`, 'success');
+ }
+
+ playSound('abono');
+ imprimirTicket(clienteEncontrado, prestamoEncontrado, nuevoAbono, nuevoSaldo);
+ document.getElementById('form-abono').reset();
+ document.getElementById('info-saldo-abono').style.display = 'none';
 }
 
-// ============================================================
-//  FUNCIONES DE ELIMINACIÓN (adaptadas)
-// ============================================================
+function imprimirTicket(cliente, prestamo, abono, nuevoSaldo) {
+ let area = document.getElementById('ticket-contenido');
+ if(!area) return;
 
-async function eliminarPrestamo(doc, prestamoId) {
-  if(!confirm('¿Estás seguro de eliminar este préstamo?')) return;
-  let cliente = db.clientes.find(c => c.doc === doc);
-  if(cliente) {
-    cliente.prestamos = cliente.prestamos.filter(p => p.id !== prestamoId);
-    if(cliente.prestamos.length === 0) {
-      db.clientes = db.clientes.filter(c => c.doc !== doc);
-    }
-    await guardarDB();
-    notificar('Préstamo eliminado', 'success');
-    renderizarDashboard();
-    renderizarHistorial();
-    actualizarSelectPrestamos();
-  }
+ area.innerHTML = `
+   <div style="font-family:monospace;width:280px;margin:0 auto;color:#000;background:#fff;padding:15px;font-size:12px">
+     <div style="text-align:center;font-weight:bold;font-size:16px;margin-bottom:4px">INVERKEV S.A.S.</div>
+     <div style="text-align:center;font-size:10px;margin-bottom:10px">Sistema de Crédito y Cobranza</div>
+     <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;margin-bottom:8px">
+       <div><strong>Fecha:</strong> ${abono.fecha}</div>
+       <div><strong>Ticket ID:</strong> ${abono.id}</div>
+       <div><strong>Préstamo:</strong> ${prestamo.id}</div>
+     </div>
+     <div style="margin-bottom:8px">
+       <div><strong>Cliente:</strong> ${cliente.nombre}</div>
+       <div><strong>Doc:</strong> ${cliente.doc}</div>
+       <div><strong>Tel:</strong> ${cliente.telefono || '-'}</div>
+     </div>
+     <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;margin-bottom:8px">
+       <div><strong>Valor Abono:</strong> ${formatoPeso(abono.valor)}</div>
+       <div><strong>Nuevo Saldo:</strong> ${formatoPeso(Math.max(0, nuevoSaldo))}</div>
+     </div>
+     <div style="text-align:center;font-size:10px;margin-top:12px">¡Gracias por su pago puntual!<br>Conserve este comprobante.</div>
+   </div>
+ `;
+ window.print();
 }
 
-async function eliminarCliente(doc) {
-  if(!confirm('¿Estás seguro de eliminar este cliente y todos sus préstamos?')) return;
-  db.clientes = db.clientes.filter(c => c.doc !== doc);
-  await guardarDB();
-  notificar('Cliente eliminado', 'success');
+function reimprimirUltimoTicket(prestamoId) {
+ for(let c of db.clientes) {
+   let p = c.prestamos.find(x => x.id === prestamoId);
+   if(p && p.abonos.length > 0) {
+     let ultimoAbono = p.abonos[p.abonos.length - 1];
+     let rec = p.abonos.reduce((a, b) => a + b.valor, 0);
+     let moraInfo = calcularMoraUsura(p);
+     let saldo = (p.totalPagar + moraInfo.interesMora) - rec;
+     imprimirTicket(c, p, ultimoAbono, saldo);
+     return;
+   }
+ }
+ notificar('Este préstamo no tiene abonos registrados aún', 'error');
 }
 
-async function eliminarTodosClientes() {
-  if(!confirm('⚠️ ¿ATENCIÓN: Estás seguro de borrar TODOS los datos de préstamos y clientes? Esta acción no se puede deshacer.')) return;
-  db.clientes = [];
-  await guardarDB();
-  notificar('Todos los clientes han sido borrados', 'success');
+// ===== HISTORIAL Y ELIMINACION =====
+function renderizarHistorial() {
+ let filtro = (document.getElementById('buscar-historial')?.value || '').toLowerCase();
+ let contenedor = document.getElementById('contenedor-historial');
+ if(!contenedor) return;
+ contenedor.innerHTML = '';
+
+ let filtrados = db.clientes.filter(c => 
+   c.nombre.toLowerCase().includes(filtro) || c.doc.toLowerCase().includes(filtro)
+ );
+
+ if(filtrados.length === 0) {
+   contenedor.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">No se encontraron clientes.</p>';
+   return;
+ }
+
+ filtrados.forEach(c => {
+   let div = document.createElement('div');
+   div.className = 'cliente-card-historial';
+   
+   let prestamosHtml = '';
+   c.prestamos.forEach(p => {
+     let rec = p.abonos.reduce((a, b) => a + b.valor, 0);
+     let moraInfo = calcularMoraUsura(p);
+     let saldo = (p.totalPagar + moraInfo.interesMora) - rec;
+     let pagadoTotal = saldo <= 0;
+
+     let abonosHtml = '';
+     p.abonos.forEach(a => {
+       abonosHtml += `<div style="font-size:0.85rem;color:var(--text-muted);margin-left:14px">• ${a.fecha}: <strong>${formatoPeso(a.valor)}</strong> [ID: ${a.id}]</div>`;
+     });
+
+     prestamosHtml += `
+       <div style="background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:10px;padding:12px;margin-top:10px">
+         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+           <div><strong>Préstamo ID:</strong> ${p.id} | <strong>Monto:</strong> ${formatoPeso(p.monto)} | <strong>Total:</strong> ${formatoPeso(p.totalPagar)}</div>
+           <div><strong>Saldo:</strong> <span style="color:${pagadoTotal?'var(--success)':'var(--secondary)'}">${formatoPeso(Math.max(0, saldo))}</span></div>
+         </div>
+         <div style="margin-top:6px;font-size:0.85rem;color:var(--text-muted)">Vencimiento: ${p.vencimiento} | Cuotas: ${p.plazoMeses} meses</div>
+         <div style="margin-top:8px"><strong>Abonos (${p.abonos.length}):</strong></div>
+         ${abonosHtml || '<div style="font-size:0.85rem;color:var(--text-muted);margin-left:14px">Sin abonos aún</div>'}
+       </div>
+     `;
+   });
+
+   div.innerHTML = `
+     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+       <div>
+         <h3 style="font-size:1.1rem">${c.nombre}</h3>
+         <p style="color:var(--text-muted);font-size:0.85rem">Doc: ${c.doc} | Tel: ${c.telefono || 'N/A'} | Dir: ${c.direccion || 'N/A'}</p>
+       </div>
+       <button class="btn btn-sm btn-danger" onclick="eliminarClienteCompleto('${c.doc}')">🗑️ Eliminar Cliente</button>
+     </div>
+     ${prestamosHtml}
+   `;
+   contenedor.appendChild(div);
+ });
 }
 
-// ============================================================
-//  FUNCIONES DE NOTAS (adaptadas)
-// ============================================================
-
-async function guardarNota() {
-  let titulo = document.getElementById('nota-titulo').value.trim();
-  let contenido = document.getElementById('nota-contenido').value.trim();
-
-  if(!titulo || !contenido) {
-    notificar('Completa el título y el contenido de la nota', 'error');
-    return;
-  }
-
-  db.notas.push({
-    id: Date.now(),
-    fecha: new Date().toLocaleDateString(),
-    titulo,
-    contenido
-  });
-
-  await guardarDB();
-  document.getElementById('nota-titulo').value = '';
-  document.getElementById('nota-contenido').value = '';
-  notificar('Nota guardada', 'success');
-  renderizarNotas();
+function eliminarPrestamo(doc, prestamoId) {
+ if(!confirm('¿Estás seguro de eliminar este préstamo?')) return;
+ for(let c of db.clientes) {
+   if(c.doc === doc) {
+     c.prestamos = c.prestamos.filter(p => p.id !== prestamoId);
+     if(c.prestamos.length === 0) {
+       db.clientes = db.clientes.filter(x => x.doc !== doc);
+     }
+     guardarDB();
+     notificar('Préstamo eliminado correctamente', 'success');
+     return;
+   }
+ }
 }
 
-async function borrarNota(id) {
-  db.notas = db.notas.filter(n => n.id !== id);
-  await guardarDB();
-  notificar('Nota eliminada', 'success');
-  renderizarNotas();
+function eliminarClienteCompleto(doc) {
+ if(!confirm('¿Estás seguro de eliminar este cliente y todo su historial de préstamos?')) return;
+ db.clientes = db.clientes.filter(c => c.doc !== doc);
+ guardarDB();
+ notificar('Cliente eliminado correctamente', 'success');
 }
 
-async function borrarTodasNotas() {
-  if(!confirm('¿Borrar todas las notas?')) return;
-  db.notas = [];
-  await guardarDB();
-  notificar('Notas borradas', 'success');
-  renderizarNotas();
+function eliminarTodosClientes() {
+ if(!confirm('⚠️ ¿Estás completamente seguro de borrar TODO el sistema? Se perderán todos los clientes y préstamos.')) return;
+ db.clientes = [];
+ db.notas = [];
+ guardarDB();
+ notificar('Sistema reiniciado por completo', 'error');
 }
 
-// ============================================================
-//  FUNCIONES DE CONFIGURACIÓN (adaptadas)
-// ============================================================
-
-async function editarPresupuesto() {
-  let actual = db.config.presupuesto || 0;
-  let overlay = document.createElement('div');
-  overlay.className = 'modal-overlay active';
-  overlay.id = 'modal-presupuesto-temp';
-  overlay.innerHTML = `
-    <div class="modal" style="max-width:420px" onclick="event.stopPropagation()">
-      <div class="modal-header"><h3>💼 Editar Presupuesto</h3><button class="close-x" onclick="document.getElementById('modal-presupuesto-temp').remove()">✕</button></div>
-      <div class="modal-body">
-        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:12px">
-          Tu presupuesto actual es <strong style="color:var(--secondary)">${formatoPeso(actual)}</strong><br>
-          Disponible: <strong>${formatoPeso((actual - (function(){ let tot=0; db.clientes.forEach(c=>c.prestamos.forEach(p=>{tot+=p.monto})); return tot; })() + (function(){ let r=0; db.clientes.forEach(c=>c.prestamos.forEach(p=>{r+=p.abonos.reduce((a,b)=>a+b.valor,0)})); return r; })()))}</strong>
-        </p>
-        <div class="form-group"><label>Nuevo presupuesto total para prestar</label><input type="number" id="input-nuevo-presupuesto" value="${actual}" min="0" step="100000" placeholder="10000000" style="font-size:1.2rem;font-weight:700"></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('input-nuevo-presupuesto').value=5000000">5M</button>
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('input-nuevo-presupuesto').value=10000000">10M</button>
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('input-nuevo-presupuesto').value=20000000">20M</button>
-        </div>
-        <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:10px 12px;margin-top:12px;font-size:0.85rem;color:var(--text-muted)">
-          💡 <strong>Tip:</strong> Si aumentas el presupuesto, podrás seguir prestando más aunque tengas préstamos activos.<br>Si lo bajas, solo afecta el cálculo de disponible.
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="document.getElementById('modal-presupuesto-temp').remove()">Cancelar</button>
-        <button class="btn btn-primary" onclick="confirmarPresupuesto()">💾 Guardar</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  setTimeout(() => { let inp = document.getElementById('input-nuevo-presupuesto'); if(inp){ inp.focus(); inp.select(); } }, 100);
+// ===== HERRAMIENTAS ADICIONALES (CALCULADORA, NOTAS, GRAFICOS, ESTILOS) =====
+function calcInput(val){
+ if(calcBuffer === '0' && val !== '.') calcBuffer = '';
+ calcBuffer += val;
+ document.getElementById('calc-display').textContent = calcBuffer;
+ playSound('click');
+}
+function calcClear(){
+ calcBuffer = '';
+ document.getElementById('calc-display').textContent = '0';
+ playSound('click');
+}
+function calcDel(){
+ calcBuffer = calcBuffer.slice(0, -1);
+ if(!calcBuffer) calcBuffer = '0';
+ document.getElementById('calc-display').textContent = calcBuffer;
+ playSound('click');
+}
+function calcEquals(){
+ try {
+   let res = eval(calcBuffer.replace('×', '*').replace('÷', '/'));
+   calcBuffer = String(res);
+   document.getElementById('calc-display').textContent = calcBuffer;
+   playSound('success');
+ } catch(e) {
+   document.getElementById('calc-display').textContent = 'Error';
+   calcBuffer = '';
+   playSound('error');
+ }
 }
 
-async function confirmarPresupuesto() {
-  let inp = document.getElementById('input-nuevo-presupuesto');
-  if(!inp) return;
-  let val = parseFloat(inp.value);
-  if(isNaN(val) || val < 0) { notificar('Valor inválido','error'); playSound('error'); return; }
-  db.config.presupuesto = val;
-  await guardarDB();
-  renderizarDashboard();
-  let modal = document.getElementById('modal-presupuesto-temp');
-  if(modal) modal.remove();
-  notificar('💼 Presupuesto actualizado a '+formatoPeso(val),'success');
-  lanzarConfeti('cliente');
-  playSound('cliente');
+function calcularCuotaPrestamo(){
+ let monto = parseFloat(document.getElementById('calc-monto').value) || 0;
+ let interesMensual = parseFloat(document.getElementById('calc-interes').value) || 0;
+ let cuotas = parseInt(document.getElementById('calc-cuotas').value) || 1;
+ let modalidad = document.getElementById('calc-modalidad').value;
+ let resDiv = document.getElementById('resultado-calc-prestamo');
+
+ if(monto <= 0) {
+   if(resDiv) resDiv.style.display = 'none';
+   return;
+ }
+
+ let totalPagar = 0;
+ let valorCuota = 0;
+
+ if(modalidad === 'simple') {
+   let totalInteres = monto * (interesMensual / 100) * cuotas;
+   totalPagar = monto + totalInteres;
+   valorCuota = totalPagar / cuotas;
+ } else {
+   let tasa = interesMensual / 100;
+   if(tasa === 0) {
+     totalPagar = monto;
+     valorCuota = monto / cuotas;
+   } else {
+     valorCuota = monto * (tasa * Math.pow(1 + tasa, cuotas)) / (Math.pow(1 + tasa, cuotas) - 1);
+     totalPagar = valorCuota * cuotas;
+   }
+ }
+
+ if(resDiv) {
+   resDiv.style.display = 'block';
+   resDiv.innerHTML = `
+     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+       <div><small style="color:var(--text-muted)">Cuota (${cuotas})</small><br><strong style="color:var(--secondary)">${formatoPeso(valorCuota)}</strong></div>
+       <div><small style="color:var(--text-muted)">Total Interés</small><br><strong style="color:var(--warning)">${formatoPeso(totalPagar - monto)}</strong></div>
+       <div><small style="color:var(--text-muted)">Total a Pagar</small><br><strong style="color:var(--success)">${formatoPeso(totalPagar)}</strong></div>
+     </div>
+   `;
+ }
 }
 
-function aplicarEstilo(guardar = true) {
-  let blurVal = document.getElementById('estilo-blur').value;
-  let radiusVal = document.getElementById('estilo-radius').value;
-  let modo = document.getElementById('estilo-modo').value;
-  let densidad = document.getElementById('estilo-densidad').value;
+function usarCalculoEnFormulario(){
+ let monto = document.getElementById('calc-monto').value;
+ let interes = document.getElementById('calc-interes').value;
+ let cuotas = document.getElementById('calc-cuotas').value;
 
-  document.getElementById('blur-val').textContent = blurVal + 'px';
-  document.getElementById('radius-val').textContent = radiusVal + 'px';
+ if(!monto) { notificar('Ingresa un monto en la calculadora','error'); return; }
 
-  document.documentElement.style.setProperty('--blur', blurVal + 'px');
-  document.documentElement.style.setProperty('--radius', radiusVal + 'px');
-
-  if(modo === 'solid') {
-    document.documentElement.style.setProperty('--glass-bg', '#141418');
-  } else if(modo === 'minimal') {
-    document.documentElement.style.setProperty('--glass-bg', 'rgba(10,10,10,0.2)');
-  } else {
-    document.documentElement.style.setProperty('--glass-bg', 'rgba(20,20,20,0.4)');
-  }
-
-  db.config.blur = parseInt(blurVal);
-  db.config.radius = parseInt(radiusVal);
-  db.config.modo = modo;
-  db.config.densidad = densidad;
-
-  if(guardar) guardarDB();
+ switchTab('nuevo');
+ document.getElementById('cli-monto').value = monto;
+ if(interes) document.getElementById('cli-interes').value = interes;
+ let selectPlazo = document.getElementById('cli-plazo');
+ if(selectPlazo) {
+   selectPlazo.value = cuotas;
+   actualizarVencimientoPorMeses();
+ }
+ calcularPreview();
+ notificar('Datos cargados al formulario de nuevo préstamo','success');
 }
 
-function resetEstilo() {
-  document.getElementById('estilo-blur').value = 16;
-  document.getElementById('estilo-radius').value = 16;
-  document.getElementById('estilo-modo').value = 'glass';
-  document.getElementById('estilo-densidad').value = 'normal';
-  aplicarEstilo(true);
+function guardarNota(){
+ let titulo = document.getElementById('nota-titulo').value.trim();
+ let contenido = document.getElementById('nota-contenido').value.trim();
+ if(!titulo && !contenido) { notificar('Escribe algo en la nota','error'); return; }
+
+ db.notas.unshift({
+   id: 'N-' + Date.now(),
+   titulo: titulo || 'Nota sin título',
+   contenido,
+   fecha: new Date().toLocaleDateString()
+ });
+ guardarDB();
+ document.getElementById('nota-titulo').value = '';
+ document.getElementById('nota-contenido').value = '';
+ notificar('Nota guardada','success');
+ playSound('cliente');
 }
 
-function aplicarColores(guardar = true) {
-  let primary = document.getElementById('color-primary').value;
-  let secondary = document.getElementById('color-secondary').value;
-  let accent = document.getElementById('color-accent').value;
-  let success = document.getElementById('color-success').value;
-  let danger = document.getElementById('color-danger').value;
-
-  document.documentElement.style.setProperty('--primary', primary);
-  document.documentElement.style.setProperty('--secondary', secondary);
-  document.documentElement.style.setProperty('--accent', accent);
-  document.documentElement.style.setProperty('--success', success);
-  document.documentElement.style.setProperty('--danger', danger);
-
-  db.config.primary = primary;
-  db.config.secondary = secondary;
-  db.config.accent = accent;
-  db.config.success = success;
-  db.config.danger = danger;
-
-  if(guardar) guardarDB();
+function renderizarNotas(){
+ let lista = document.getElementById('lista-notas');
+ if(!lista) return;
+ lista.innerHTML = '';
+ if(db.notas.length === 0) {
+   lista.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem">No hay notas guardadas.</p>';
+   return;
+ }
+ db.notas.forEach(n => {
+   let div = document.createElement('div');
+   div.className = 'nota-item';
+   div.innerHTML = `
+     <div>
+       <strong>${n.titulo}</strong><small style="display:block;color:var(--text-muted);font-size:0.75rem">${n.fecha}</small>
+       <p>${n.contenido}</p>
+     </div>
+     <button class="btn btn-sm btn-danger" onclick="eliminarNota('${n.id}')">🗑️</button>
+   `;
+   lista.appendChild(div);
+ });
 }
 
-function resetColores() {
-  document.getElementById('color-primary').value = '#581c87';
-  document.getElementById('color-secondary').value = '#38bdf8';
-  document.getElementById('color-accent').value = '#7c3aed';
-  document.getElementById('color-success').value = '#10b981';
-  document.getElementById('color-danger').value = '#ef4444';
-  aplicarColores(true);
+function eliminarNota(id){
+ db.notas = db.notas.filter(n => n.id !== id);
+ guardarDB();
+ notificar('Nota eliminada','success');
 }
 
-function cambiarIdioma(lang) {
-  idiomaActual = lang;
-  db.config.idioma = lang;
-  guardarDB();
-  actualizarTextosIdioma();
+function borrarTodasNotas(){
+ if(!confirm('¿Borrar todas las notas?')) return;
+ db.notas = [];
+ guardarDB();
+ notificar('Notas borradas','success');
 }
 
-// ============================================================
-//  FUNCIONES DE RENDERIZADO (iguales, pero usan db local)
-// ============================================================
-// (Las funciones renderizarDashboard, renderizarHistorial, etc. son iguales a las originales,
-//  solo que ahora trabajan con db.clientes y db.notas que se cargan desde Supabase)
+// Charts references
+let chartEstadoInst = null;
+let chartMontosInst = null;
+let chartMoraInst = null;
+let chartRecaudoInst = null;
 
-// ============================================================
-//  FUNCIONES DE AUTENTICACIÓN (iguales)
-// ============================================================
-// (Login, hash, etc. sin cambios)
+function renderizarGraficos(){
+ let ctx1 = document.getElementById('chart-estado')?.getContext('2d');
+ let ctx2 = document.getElementById('chart-montos')?.getContext('2d');
+ let ctx3 = document.getElementById('chart-mora')?.getContext('2d');
+ let ctx4 = document.getElementById('chart-recaudo')?.getContext('2d');
+ if(!ctx1) return;
 
-// ============================================================
-//  INICIALIZACIÓN
-// ============================================================
-window.onload = function() {
-  // Cargar datos desde Supabase
-  cargarDatosSupabase();
+ let alDia = 0, enMora = 0, pagados = 0;
+ let mesesMap = {};
+ let totalRecaudadoG = 0, totalSaldoG = 0;
 
-  // Verificar sesión
-  let loggedIn = sessionStorage.getItem('inverkev_logged_in') === 'true';
-  let overlay = document.getElementById('login-overlay');
-  if(loggedIn && overlay) overlay.classList.add('hidden');
+ db.clientes.forEach(c => {
+   c.prestamos.forEach(p => {
+     let rec = p.abonos.reduce((a,b)=>a+b.valor,0);
+     let moraInfo = calcularMoraUsura(p);
+     let saldo = (p.totalPagar + moraInfo.interesMora) - rec;
+     totalRecaudadoG += rec;
+     totalSaldoG += Math.max(0, saldo);
 
-  // Inicializar otras cosas
-  actualizarVencimientoPorMeses();
+     if(saldo <= 0) pagados++;
+     else if(moraInfo.diasMora > 0) enMora++;
+     else alDia++;
+
+     let mes = p.fechaCreacion ? p.fechaCreacion.slice(0,7) : '2026-01';
+     mesesMap[mes] = (mesesMap[mes] || 0) + p.monto;
+   });
+ });
+
+ let labelsMeses = Object.keys(mesesMap).sort();
+ let dataMeses = labelsMeses.map(m => mesesMap[m]);
+
+ if(chartEstadoInst) chartEstadoInst.destroy();
+ chartEstadoInst = new Chart(ctx1, {
+   type: 'doughnut',
+   data: {
+     labels: ['Al Día', 'En Mora', 'Pagados'],
+     datasets: [{ data: [alDia, enMora, pagados], backgroundColor: ['#38bdf8', '#ef4444', '#10b981'], borderWidth:0 }]
+   },
+   options: { responsive:true, plugins: { legend: { position: 'bottom', labels: { color: '#ededed' } } } }
+ });
+
+ if(chartMontosInst) chartMontosInst.destroy();
+ chartMontosInst = new Chart(ctx2, {
+   type: 'bar',
+   data: {
+     labels: labelsMeses.length > 0 ? labelsMeses : ['2026-01'],
+     datasets: [{ label: 'Monto Prestado', data: dataMeses.length > 0 ? dataMeses : [0], backgroundColor: '#7c3aed', borderRadius:8 }]
+   },
+   options: { responsive:true, plugins: { legend: { display:false } }, scales: { x: { ticks: { color: '#a1a1aa' } }, y: { ticks: { color: '#a1a1aa' } } } }
+ });
+
+ if(chartMoraInst) chartMoraInst.destroy();
+ chartMoraInst = new Chart(ctx3, {
+   type: 'pie',
+   data: {
+     labels: ['Sin Mora', 'Con Mora'],
+     datasets: [{ data: [alDia + pagados, enMora], backgroundColor: ['#38bdf8', '#ef4444'], borderWidth:0 }]
+   },
+   options: { responsive:true, plugins: { legend: { position: 'bottom', labels: { color: '#ededed' } } } }
+ });
+
+ if(chartRecaudoInst) chartRecaudoInst.destroy();
+ chartRecaudoInst = new Chart(ctx4, {
+   type: 'bar',
+   data: {
+     labels: ['Recaudado', 'Saldo Pendiente'],
+     datasets: [{ data: [totalRecaudadoG, totalSaldoG], backgroundColor: ['#10b981', '#38bdf8'], borderRadius:8 }]
+   },
+   options: { responsive:true, plugins: { legend: { display:false } }, scales: { x: { ticks: { color: '#a1a1aa' } }, y: { ticks: { color: '#a1a1aa' } } } }
+ });
+}
+
+function renderUltimosClientes(){
+ let div = document.getElementById('lista-ultimos-clientes');
+ if(!div) return;
+ if(db.clientes.length === 0) {
+   div.innerHTML = 'Sin datos aún';
+   return;
+ }
+ let ultimos = db.clientes.slice(-3).reverse();
+ let html = '';
+ ultimos.forEach(c => {
+   html += `<div style="margin-bottom:6px"><strong>${c.nombre}</strong> (${c.doc})</div>`;
+ });
+ div.innerHTML = html;
+}
+
+function aplicarEstilo(guardar=true){
+ let blur = document.getElementById('estilo-blur')?.value || 16;
+ let radius = document.getElementById('estilo-radius')?.value || 16;
+ let modo = document.getElementById('estilo-modo')?.value || 'glass';
+ let densidad = document.getElementById('estilo-densidad')?.value || 'normal';
+
+ document.getElementById('blur-val').textContent = blur + 'px';
+ document.getElementById('radius-val').textContent = radius + 'px';
+
+ document.documentElement.style.setProperty('--blur', blur + 'px');
+ document.documentElement.style.setProperty('--radius', radius + 'px');
+
+ if(modo === 'solid') {
+   document.documentElement.style.setProperty('--glass-bg', 'rgba(18, 18, 22, 0.95)');
+ } else if(modo === 'minimal') {
+   document.documentElement.style.setProperty('--glass-bg', 'rgba(10, 10, 10, 0.8)');
+   document.documentElement.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.15)');
+ } else {
+   document.documentElement.style.setProperty('--glass-bg', 'rgba(20, 20, 20, 0.4)');
+   document.documentElement.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.08)');
+ }
+
+ if(guardar){
+   db.config.blur = blur;
+   db.config.radius = radius;
+   db.config.modo = modo;
+   db.config.densidad = densidad;
+   guardarDB();
+ }
+}
+
+function resetEstilo(){
+ document.getElementById('estilo-blur').value = 16;
+ document.getElementById('estilo-radius').value = 16;
+ document.getElementById('estilo-modo').value = 'glass';
+ document.getElementById('estilo-densidad').value = 'normal';
+ aplicarEstilo();
+}
+
+function aplicarColores(guardar=true){
+ let p = document.getElementById('color-primary')?.value || '#581c87';
+ let s = document.getElementById('color-secondary')?.value || '#38bdf8';
+ let a = document.getElementById('color-accent')?.value || '#7c3aed';
+ let succ = document.getElementById('color-success')?.value || '#10b981';
+ let dang = document.getElementById('color-danger')?.value || '#ef4444';
+
+ document.documentElement.style.setProperty('--primary', p);
+ document.documentElement.style.setProperty('--secondary', s);
+ document.documentElement.style.setProperty('--accent', a);
+ document.documentElement.style.setProperty('--success', succ);
+ document.documentElement.style.setProperty('--danger', dang);
+
+ if(guardar){
+   db.config.primary = p;
+   db.config.secondary = s;
+   db.config.accent = a;
+   db.config.success = succ;
+   db.config.danger = dang;
+   guardarDB();
+ }
+}
+
+function resetColores(){
+ document.getElementById('color-primary').value = '#581c87';
+ document.getElementById('color-secondary').value = '#38bdf8';
+ document.getElementById('color-accent').value = '#7c3aed';
+ document.getElementById('color-success').value = '#10b981';
+ document.getElementById('color-danger').value = '#ef4444';
+ aplicarColores();
+}
+
+function cambiarIdioma(val){
+ idiomaActual = val;
+ db.config.idioma = val;
+ guardarDB();
+ actualizarTextosIdioma();
+ notificar('Idioma cambiado correctamente','success');
+}
+
+function exportarExcel(){
+ let csv = 'Cliente,Documento,Telefono,PrestamoID,Monto,TotalPagar,Vencimiento,Saldo\n';
+ db.clientes.forEach(c => {
+   c.prestamos.forEach(p => {
+     let rec = p.abonos.reduce((a,b)=>a+b.valor,0);
+     let saldo = p.totalPagar - rec;
+     csv += `"${c.nombre}","${c.doc}","${c.telefono||''}","${p.id}",${p.monto},${p.totalPagar},"${p.vencimiento}",${saldo}\n`;
+   });
+ });
+ let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+ let url = URL.createObjectURL(blob);
+ let a = document.createElement('a');
+ a.href = url;
+ a.download = 'inverkev_prestamos.csv';
+ a.click();
+ notificar('Datos exportados correctamente','success');
+}
+
+function lanzarConfeti(tipo='cliente'){
+ let overlay = document.createElement('div');
+ overlay.className = 'celebration-overlay';
+ 
+ let colors = ['#38bdf8', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#fff'];
+ for(let i=0; i<60; i++){
+   let piece = document.createElement('div');
+   piece.className = 'confetti-piece';
+   piece.style.left = Math.random()*100 + 'vw';
+   piece.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+   piece.style.animationDuration = (2 + Math.random()*2) + 's';
+   piece.style.animationDelay = (Math.random()*0.5) + 's';
+   overlay.appendChild(piece);
+ }
+
+ if(tipo === 'pagado') {
+   let center = document.createElement('div');
+   center.className = 'celebration-center';
+   center.innerHTML = `<h2>🎉 ¡Préstamo Pagado!</h2><p>¡Felicitaciones por completar el crédito con éxito!</p>`;
+   overlay.appendChild(center);
+ }
+
+ document.body.appendChild(overlay);
+ setTimeout(()=>overlay.remove(), 4000);
+}
+
+// Inicialización al cargar la ventana
+window.onload = async function(){
+ await cargarDatosSupabase();
+ actualizarVencimientoPorMeses();
+ if(sessionStorage.getItem('inverkev_logged_in') === 'true') {
+   document.getElementById('login-overlay').classList.add('hidden');
+ }
 };
-
-// NOTA: Las funciones de renderizado, cálculos, sonidos, etc. se mantienen idénticas
-// a tu versión original, solo se adaptaron las de guardado/eliminación.
-// Para no duplicar todo el código, asumo que las tienes completas en tu versión original.
-// Si necesitas el código completo con todas las funciones de renderizado, avísame y te lo paso.
-// Por ahora, la estructura principal está adaptada a Supabase.
 </script>
 </body>
 </html>
+
