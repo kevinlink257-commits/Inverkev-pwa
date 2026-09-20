@@ -160,6 +160,35 @@
    .modo-radio{flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);padding:12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s}
    .modo-radio:hover{border-color:var(--glass-highlight)}
    .modo-radio input:checked ~ span{font-weight:700;color:var(--secondary)}
+
+   /* ===== ESTILOS ADICIONALES: SCORING / LEGAL / CARTERA ===== */
+   .scoring-radio{display:flex;flex-direction:column;gap:2px}
+   .scoring-radio label{display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s}
+   .scoring-radio label:hover{background:rgba(255,255,255,0.05)}
+   .scoring-radio input{width:auto;margin:0}
+   .doc-preview{background:#fff;color:#000;padding:36px;border-radius:10px;font-family:'Times New Roman',Georgia,serif;font-size:13px;line-height:1.7;max-height:65vh;overflow-y:auto}
+   .doc-preview h1{font-size:15px;text-align:center;margin-bottom:16px;font-weight:700;text-transform:uppercase}
+   .doc-preview h2{font-size:13px;text-align:center;margin:14px 0 10px;font-weight:700}
+   .doc-preview p{margin:8px 0;text-align:justify}
+   .doc-preview .firma{margin-top:50px;display:flex;gap:40px;justify-content:space-around;flex-wrap:wrap}
+   .doc-preview .firma div{border-top:1px solid #000;padding-top:4px;min-width:180px;text-align:center;font-size:11px}
+   .doc-preview table{width:100%;border-collapse:collapse;margin:10px 0}
+   .doc-preview table th,.doc-preview table td{border:1px solid #333;padding:6px;font-size:11px;color:#000}
+   .doc-preview table th{background:#eee;color:#000}
+   .checklist-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--glass-border);font-size:.9rem;align-items:flex-start;cursor:pointer}
+   .checklist-item input{width:auto;margin-top:3px;cursor:pointer}
+   .checklist-item.checked{opacity:.55;text-decoration:line-through}
+   #legal-print-area{display:none}
+   @media print{
+     #legal-print-area, #legal-print-area * { visibility: visible !important; }
+     #legal-print-area { position:absolute; left:0; top:0; width:100%; display:block !important; background:#fff; color:#000; padding:20px; font-family:'Times New Roman',Georgia,serif; font-size:12px; line-height:1.6; }
+     #legal-print-area h1{font-size:15px;text-align:center;text-transform:uppercase}
+     #legal-print-area table{width:100%;border-collapse:collapse}
+     #legal-print-area table th,#legal-print-area table td{border:1px solid #333;padding:5px;font-size:10px}
+     #legal-print-area .firma{margin-top:50px;display:flex;gap:40px;justify-content:space-around;flex-wrap:wrap}
+     #legal-print-area .firma div{border-top:1px solid #000;padding-top:4px;min-width:180px;text-align:center;font-size:11px}
+     .page-break{page-break-after:always}
+   }
  </style>
  <link rel="manifest" href="./manifest.json">
  <meta name="theme-color" content="#581c87">
@@ -215,6 +244,9 @@
            <button class="menu-item" data-tab="abonos" onclick="switchTab('abonos',this);closeMenu()"><span class="ico">💰</span> <span data-i18n="registrarAbono">Registrar Abono</span></button>
            <button class="menu-item" data-tab="capital" onclick="switchTab('capital',this);closeMenu()"><span class="ico">🏦</span> <span>Abono a Capital</span> <span class="badge-new">Nuevo</span></button>
            <button class="menu-item" data-tab="historial" onclick="switchTab('historial',this);closeMenu()"><span class="ico">📜</span> <span data-i18n="historialClientes">Historial Clientes</span></button>
+           <button class="menu-item" data-tab="scoring" onclick="switchTab('scoring',this);closeMenu()"><span class="ico">📋</span> <span>Scoring de Crédito</span> <span class="badge-new">Obligatorio</span></button>
+           <button class="menu-item" data-tab="legal" onclick="switchTab('legal',this);closeMenu();setTimeout(actualizarSelectLegal,50)"><span class="ico">⚖️</span> <span>Contratos y Pagaré</span></button>
+           <button class="menu-item" data-tab="cartera" onclick="switchTab('cartera',this);closeMenu()"><span class="ico">📊</span> <span>Base Cartera 15M</span></button>
          </div>
          <div class="menu-section">
            <span class="menu-section-title" data-i18n="empresa">🏢 Empresa</span>
@@ -248,6 +280,9 @@
  <button class="tab-btn" data-target="calculadora" onclick="switchTab('calculadora',this)">Calculadora</button>
  <button class="tab-btn" data-target="notas" onclick="switchTab('notas',this)">Notas</button>
  <button class="tab-btn" data-target="graficos" onclick="switchTab('graficos',this)">Gráficos</button>
+ <button class="tab-btn" data-target="scoring" onclick="switchTab('scoring',this)">📋 Scoring</button>
+ <button class="tab-btn" data-target="legal" onclick="switchTab('legal',this)">⚖️ Contratos</button>
+ <button class="tab-btn" data-target="cartera" onclick="switchTab('cartera',this)">📊 Cartera 15M</button>
 </div>
 
 <!-- INICIO -->
@@ -344,7 +379,7 @@
  </div>
 </div>
 
-<!-- ABONO A CAPITAL (NUEVO) -->
+<!-- ABONO A CAPITAL -->
 <div id="tab-capital" class="tab-content">
  <div class="grid-2">
    <div class="card glass">
@@ -472,6 +507,154 @@
  </div>
 </div>
 
+<!-- ================= SCORING ================= -->
+<div id="tab-scoring" class="tab-content">
+ <div class="card glass">
+   <h2>📋 Scoring de Crédito — Filtro Obligatorio</h2>
+   <p class="card-desc">No prestar si el puntaje total es menor a <strong>7</strong>. Suma de 6 criterios, máximo 12 puntos. El <strong>peso</strong> indica prioridad de análisis, no multiplica el puntaje.</p>
+   <div class="form-group" style="max-width:340px">
+     <label>Documento del solicitante (opcional, para guardar histórico)</label>
+     <input type="text" id="scoring-doc" placeholder="Ej: 12345678">
+   </div>
+   <div id="scoring-tabla"></div>
+   <div id="scoring-resultado" style="margin-top:18px"></div>
+   <div class="action-btns" style="margin-top:14px">
+     <button class="btn btn-ghost" onclick="resetScoring()">♻️ Reiniciar</button>
+     <button class="btn btn-primary" onclick="guardarScoring()">💾 Guardar evaluación</button>
+     <button class="btn btn-success" onclick="aplicarScoringAlPrestamo()">➡️ Usar en Nuevo Préstamo</button>
+     <button class="btn btn-primary" onclick="switchTab('legal');setTimeout(actualizarSelectLegal,50)">⚖️ Generar contrato</button>
+   </div>
+ </div>
+ <div class="card glass">
+   <h3>📚 Historial de evaluaciones</h3>
+   <div id="scoring-historial" style="margin-top:10px;font-size:.9rem;color:var(--text-muted)">Sin registros aún.</div>
+ </div>
+</div>
+
+<!-- ================= LEGAL ================= -->
+<div id="tab-legal" class="tab-content">
+ <div class="grid-2">
+   <div class="card glass">
+     <h2>⚖️ Generador de Documentos Legales</h2>
+     <p class="card-desc">Carga los datos del cliente y del préstamo. Luego genera el Contrato, el Pagaré o la Autorización Habeas Data. Se imprimen o guardan como PDF.</p>
+
+     <div class="form-group">
+       <label>Selecciona un préstamo existente (auto-rellena)</label>
+       <select id="legal-prestamo" onchange="cargarDatosLegales()"></select>
+     </div>
+
+     <div class="grid-2" style="gap:12px">
+       <div class="form-group"><label>Nombre del MUTUANTE (tú)</label><input type="text" id="legal-mutuante" placeholder="Tu nombre completo"></div>
+       <div class="form-group"><label>Cédula del MUTUANTE</label><input type="text" id="legal-mutuante-cc" placeholder="CC 00000000"></div>
+     </div>
+     <div class="grid-2" style="gap:12px">
+       <div class="form-group"><label>Nequi / Bancolombia (pagos)</label><input type="text" id="legal-nequi" placeholder="300 000 0000"></div>
+       <div class="form-group"><label>Ciudad</label><input type="text" id="legal-ciudad" value="Soledad, Atlántico"></div>
+     </div>
+
+     <hr style="border:0;border-top:1px solid var(--glass-border);margin:16px 0">
+
+     <div class="grid-2" style="gap:12px">
+       <div class="form-group"><label>Nombre del cliente *</label><input type="text" id="legal-nombre"></div>
+       <div class="form-group"><label>Cédula del cliente *</label><input type="text" id="legal-cc"></div>
+     </div>
+     <div class="form-group"><label>Dirección del cliente *</label><input type="text" id="legal-direccion"></div>
+     <div class="grid-3" style="gap:10px">
+       <div class="form-group"><label>Celular</label><input type="text" id="legal-celular"></div>
+       <div class="form-group"><label>Email</label><input type="email" id="legal-email"></div>
+       <div class="form-group"><label>Vencimiento</label><input type="date" id="legal-vencimiento"></div>
+     </div>
+     <div class="grid-3" style="gap:10px">
+       <div class="form-group"><label>Monto (capital)</label><input type="number" id="legal-monto" step="1000"></div>
+       <div class="form-group"><label>Interés % mensual</label><input type="number" id="legal-interes" step="0.1" value="2.2"></div>
+       <div class="form-group"><label>Plazo (meses)</label><input type="number" id="legal-plazo" min="1" value="2"></div>
+     </div>
+
+     <div class="action-btns" style="margin-top:8px">
+       <button class="btn btn-primary" onclick="generarContrato()">📄 Contrato de Mutuo</button>
+       <button class="btn btn-primary" onclick="generarPagare()">🧾 Pagaré + Carta</button>
+       <button class="btn btn-primary" onclick="generarHabeas()">🔒 Habeas Data</button>
+       <button class="btn btn-success" onclick="generarKitCompleto()">📦 Kit Completo</button>
+     </div>
+   </div>
+
+   <div class="card glass">
+     <h3>✅ Checklist antes de desembolsar</h3>
+     <p class="card-desc">No lo saltes. Cada casilla es evidencia clave en caso de cobro jurídico.</p>
+     <label class="checklist-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked',this.checked)"> Foto cédula por ambas caras</label>
+     <label class="checklist-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked',this.checked)"> Video de 10 seg: "Yo [NOMBRE], CC [XXXX], acepto préstamo de $XXX con [TU NOMBRE] al 2.2% mensual"</label>
+     <label class="checklist-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked',this.checked)"> Recibo de servicio público en Soledad (verifica dirección)</label>
+     <label class="checklist-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked',this.checked)"> 2 referencias llamadas y anotadas</label>
+     <label class="checklist-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked',this.checked)"> Consulta Datacrédito (pantallazo)</label>
+     <label class="checklist-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked',this.checked)"> Contrato + Pagaré + Carta + Autorización firmados y con huella</label>
+     <label class="checklist-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked',this.checked)"> Comprobante de transferencia Nequi/Bancolombia con nota: "Préstamo mutuo"</label>
+
+     <div style="margin-top:16px;padding:12px;border-radius:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);font-size:.82rem;color:var(--text-muted)">
+       ⚠️ <strong style="color:#fbbf24">Aviso legal:</strong> Este kit es un modelo educativo. Debe ser revisado por un abogado en Soledad/Barranquilla antes de usarse. Cumple lineamientos generales del Código Civil Art. 2221 y ss., Ley 1480, Ley 1266 y Ley 2300 de 2023.
+     </div>
+   </div>
+ </div>
+</div>
+
+<!-- ================= CARTERA 15M + AMORTIZACIÓN ================= -->
+<div id="tab-cartera" class="tab-content">
+ <div class="card glass">
+   <h2>📊 Base Cartera 15M — Estructura</h2>
+   <p class="card-desc">Ejemplo de cómo se registra la cartera de préstamos para dar transparencia al cliente.</p>
+   <div style="overflow:auto">
+     <table>
+       <thead><tr>
+         <th>ID</th><th>Nombre Cliente</th><th>Cédula</th><th>Celular</th><th>Monto</th>
+         <th>Fecha Desembolso</th><th>Fecha Vencimiento</th><th>Tasa Mensual</th>
+         <th>Cuota Quincenal</th><th>Estado</th><th>Días Mora</th><th>Interés Cobrado</th><th>Saldo</th>
+       </tr></thead>
+       <tbody id="cartera-ejemplo-body">
+         <tr>
+           <td>L-000001</td><td>Cliente Ejemplo</td><td>12345678</td><td>300 123 4567</td>
+           <td>$900.000</td><td>2026-01-15</td><td>2026-03-15</td><td>2.2%</td>
+           <td>$231.187</td><td>Al día</td><td>0</td><td>$24.750</td><td>$900.000</td>
+         </tr>
+       </tbody>
+     </table>
+   </div>
+   <small style="color:var(--text-muted)">La tabla se llena automáticamente desde tus préstamos activos cuando exportas a Excel (botón 📥 Exportar).</small>
+ </div>
+
+ <div class="card glass">
+   <h2>📈 Tabla de Amortización — Ejemplo $900.000 a 60 días (4 quincenas)</h2>
+   <p class="card-desc">Modelo informativo. Tasa 2.2% mensual (1.1% quincenal), siempre por debajo de la usura certificada por la Superfinanciera. No incluye gastos de cobranza.</p>
+   <div style="overflow:auto">
+     <table>
+       <thead><tr>
+         <th>N° Cuota</th><th>Fecha Vencimiento</th><th>Saldo Inicial</th><th>Interés</th>
+         <th>Abono Capital</th><th>Cuota Total</th><th>Saldo Final</th>
+       </tr></thead>
+       <tbody>
+         <tr><td>1</td><td>Quincena 1 (15 días)</td><td>$900.000</td><td>$9.900</td><td>$225.000</td><td><strong>$234.900</strong></td><td>$675.000</td></tr>
+         <tr><td>2</td><td>Quincena 2 (15 días)</td><td>$675.000</td><td>$7.425</td><td>$225.000</td><td><strong>$232.425</strong></td><td>$450.000</td></tr>
+         <tr><td>3</td><td>Quincena 3 (15 días)</td><td>$450.000</td><td>$4.950</td><td>$225.000</td><td><strong>$229.950</strong></td><td>$225.000</td></tr>
+         <tr><td>4</td><td>Quincena 4 (15 días)</td><td>$225.000</td><td>$2.475</td><td>$225.000</td><td><strong>$227.475</strong></td><td>$0</td></tr>
+         <tr style="background:rgba(56,189,248,0.08)">
+           <td colspan="3"><strong>TOTALES</strong></td>
+           <td><strong>$24.750</strong></td><td><strong>$900.000</strong></td>
+           <td><strong>$924.750</strong></td><td>—</td>
+         </tr>
+       </tbody>
+     </table>
+   </div>
+   <div style="margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+     <div class="stat"><small>CAPITAL</small><h3 style="font-size:1.3rem">$900.000</h3></div>
+     <div class="stat"><small>INTERESES</small><h3 style="font-size:1.3rem;color:var(--secondary)">$24.750</h3></div>
+     <div class="stat"><small>TOTAL A PAGAR</small><h3 style="font-size:1.3rem;color:var(--success)">$924.750</h3></div>
+   </div>
+   <ul style="margin-top:16px;padding-left:18px;color:var(--text-muted);font-size:.88rem;line-height:1.7">
+     <li>Esta tabla es informativa y se entrega junto al contrato como anexo.</li>
+     <li>Mora: máximo interés moratorio = tasa de usura vigente. No se capitalizan intereses.</li>
+     <li>Pagos por transferencia Nequi/Bancolombia con comprobante.</li>
+   </ul>
+ </div>
+</div>
+
 </div>
 
 <!-- MODALES -->
@@ -502,6 +685,18 @@
  </div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal('modal-idioma')">Cerrar</button></div></div>
 </div>
 
+<div class="modal-overlay" id="modal-legal-preview" onclick="if(event.target===this)closeModal('modal-legal-preview')">
+ <div class="modal" style="max-width:920px" onclick="event.stopPropagation()">
+   <div class="modal-header"><h3 id="modal-legal-titulo">Documento</h3><button class="close-x" onclick="closeModal('modal-legal-preview')">✕</button></div>
+   <div class="modal-body"><div id="legal-preview-contenido" class="doc-preview"></div></div>
+   <div class="modal-footer">
+     <button class="btn btn-ghost" onclick="closeModal('modal-legal-preview')">Cerrar</button>
+     <button class="btn btn-primary" onclick="imprimirLegal()">🖨️ Imprimir / Guardar PDF</button>
+   </div>
+ </div>
+</div>
+<div id="legal-print-area"></div>
+
 <div class="notif" id="notificacion"></div>
 <div id="ticket-area"><div id="ticket-contenido"></div></div>
 
@@ -512,22 +707,20 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== BASE DE DATOS Y ESTADO =====
-let db = { clientes: [], notas: [], config:{ blur:16, radius:16, modo:'glass', primary:'#581c87', secondary:'#38bdf8', accent:'#7c3aed', success:'#10b981', danger:'#ef4444', idioma:'es', presupuesto:10000000 } };
+let db = { clientes: [], notas: [], scorings: [], config:{ blur:16, radius:16, modo:'glass', primary:'#581c87', secondary:'#38bdf8', accent:'#7c3aed', success:'#10b981', danger:'#ef4444', idioma:'es', presupuesto:10000000 } };
 let idiomaActual = 'es';
 let calcBuffer = '';
 
 // ===== MIGRACIÓN DE DATOS =====
 function migrarDatos() {
   if(!db.clientes) db.clientes = [];
+  if(!db.scorings) db.scorings = [];
   db.clientes.forEach(c => {
     if(!c.prestamos) c.prestamos = [];
     c.prestamos.forEach(p => {
-      // Migrar montoOriginal
       if(!p.montoOriginal) p.montoOriginal = p.monto;
-      // Migrar tipo en abonos
       if(!p.abonos) p.abonos = [];
       p.abonos.forEach(a => { if(!a.tipo) a.tipo = 'cuota'; });
-      // Asegurar plazoOriginal
       if(!p.plazoOriginal) p.plazoOriginal = p.plazoMeses;
     });
   });
@@ -552,10 +745,12 @@ async function cargarDatosSupabase() {
   }
   if(!db.config.presupuesto) db.config.presupuesto = 10000000;
   if(!db.notas) db.notas = [];
+  if(!db.scorings) db.scorings = [];
   migrarDatos();
   idiomaActual = db.config.idioma || 'es';
-  renderizarDashboard(); renderizarHistorial(); actualizarSelectPrestamos(); 
+  renderizarDashboard(); renderizarHistorial(); actualizarSelectPrestamos();
   actualizarSelectCapital(); renderizarNotas(); renderizarGraficos(); renderUltimosClientes();
+  initModuloAdicional();
 }
 
 async function guardarDBSupabase() {
@@ -572,7 +767,7 @@ async function guardarDBSupabase() {
 
 function guardarDB(){
   guardarDBSupabase();
-  renderizarDashboard(); renderizarHistorial(); actualizarSelectPrestamos(); 
+  renderizarDashboard(); renderizarHistorial(); actualizarSelectPrestamos();
   actualizarSelectCapital(); renderizarNotas(); renderizarGraficos(); renderUltimosClientes();
 }
 
@@ -589,8 +784,8 @@ function calcularEstadoPrestamo(p) {
   const moraInfo = calcularMoraUsura(p);
   const saldo = Math.max(0, (p.totalPagar + moraInfo.interesMora) - totalAbonos);
   const interesPactado = p.totalPagar - (p.montoOriginal || p.monto);
-  return { 
-    abonos, totalAbonos, capitalAbonado, cuotaAbonado, montoOriginal, 
+  return {
+    abonos, totalAbonos, capitalAbonado, cuotaAbonado, montoOriginal,
     capitalActual, moraInfo, saldo, interesPactado,
     plazoActual: p.plazoMeses || 1,
     cuotaActual: p.valorCuota || (p.totalPagar/(p.plazoMeses||1))
@@ -626,6 +821,8 @@ function switchTab(id, btn){
   if(id==='graficos') setTimeout(renderizarGraficos,120);
   if(id==='capital') actualizarSelectCapital();
   if(id==='abonos') actualizarSelectPrestamos();
+  if(id==='legal') actualizarSelectLegal();
+  if(id==='scoring') renderScoring();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -816,8 +1013,8 @@ function renderizarDashboard() {
             ? `<span class="mora-badge">⚠️ Mora ${est.moraInfo.diasMora}d</span>`
             : `<span class="ok-badge">🟢 Al día</span>`;
 
-        let capitalTag = est.capitalAbonado > 0 
-          ? `<span class="capital-badge">🏦 Cap. abonado: ${formatoPeso(est.capitalAbonado)}</span>` 
+        let capitalTag = est.capitalAbonado > 0
+          ? `<span class="capital-badge">🏦 Cap. abonado: ${formatoPeso(est.capitalAbonado)}</span>`
           : '';
 
         tr.innerHTML = `
@@ -1090,7 +1287,7 @@ function registrarAbono(e) {
   document.getElementById('info-saldo-abono').style.display = 'none';
 }
 
-// ===== ABONO A CAPITAL (NUEVA SESIÓN) =====
+// ===== ABONO A CAPITAL =====
 function actualizarSelectCapital() {
   const select = document.getElementById('select-prestamo-capital');
   if(!select) return;
@@ -1173,23 +1370,23 @@ function previsualizarAbonoCapital() {
     if(p) {
       const est = calcularEstadoPrestamo(p);
       if(valor > est.capitalActual || valor > est.saldo) { preview.style.display='none'; return; }
-      
+
       const newCapital = est.capitalActual - valor;
       const newSaldo = est.saldo - valor;
       const plazoActual = est.plazoActual;
       let nuevaCuota = est.cuotaActual;
       let nuevoPlazo = plazoActual;
-      
+
       if(modo === 'reducir-cuota') {
         nuevaCuota = newSaldo / plazoActual;
       } else {
         nuevoPlazo = Math.max(1, Math.ceil(newSaldo / est.cuotaActual));
         nuevaCuota = newSaldo / nuevoPlazo;
       }
-      
+
       const ahorroCuota = est.cuotaActual - nuevaCuota;
       const ahorroPlazo = plazoActual - nuevoPlazo;
-      
+
       preview.style.display='block';
       preview.innerHTML = `
         <h4 style="margin-bottom:12px">📊 Previsualización del recálculo</h4>
@@ -1239,7 +1436,6 @@ function registrarAbonoCapital(e) {
     notificar(`El abono supera el saldo total (${formatoPeso(est.saldo)})`,'error'); playSound('error'); return;
   }
 
-  // Snapshots
   const cuotaVieja = est.cuotaActual;
   const plazoViejo = est.plazoActual;
   const saldoViejo = est.saldo;
@@ -1258,13 +1454,11 @@ function registrarAbonoCapital(e) {
     nuevaCuota = nuevoPlazo > 0 ? newSaldo / nuevoPlazo : 0;
   }
 
-  // Ajustar si queda saldo 0
   if(newSaldo <= 0) {
     nuevoPlazo = 1;
     nuevaCuota = 0;
   }
 
-  // Registrar abono
   const nuevoAbono = {
     id: 'AC-' + Date.now().toString().slice(-6),
     fecha: new Date().toISOString().replace('T',' ').slice(0,19),
@@ -1282,13 +1476,11 @@ function registrarAbonoCapital(e) {
   };
   prestamo.abonos.push(nuevoAbono);
 
-  // Aplicar recálculo
   prestamo.monto = newCapital;
   prestamo.plazoMeses = nuevoPlazo;
   prestamo.valorCuota = nuevaCuota;
   prestamo.totalPagar = newSaldo + (totalAbonosAntes + valor);
 
-  // Actualizar vencimiento
   const hoy = new Date();
   const newVenc = new Date(hoy);
   newVenc.setMonth(newVenc.getMonth() + nuevoPlazo);
@@ -1296,8 +1488,8 @@ function registrarAbonoCapital(e) {
 
   guardarDB();
 
-  const modoTxt = modo === 'reducir-cuota' 
-    ? `Nueva cuota: ${formatoPeso(nuevaCuota)}` 
+  const modoTxt = modo === 'reducir-cuota'
+    ? `Nueva cuota: ${formatoPeso(nuevaCuota)}`
     : `Nuevo plazo: ${nuevoPlazo} meses`;
 
   if(newSaldo <= 0) {
@@ -1408,7 +1600,7 @@ function renderizarHistorial() {
   if(!contenedor) return;
   contenedor.innerHTML = '';
 
-  let filtrados = db.clientes.filter(c => 
+  let filtrados = db.clientes.filter(c =>
     c.nombre.toLowerCase().includes(filtro) || c.doc.toLowerCase().includes(filtro)
   );
 
@@ -1420,7 +1612,7 @@ function renderizarHistorial() {
   filtrados.forEach(c => {
     let div = document.createElement('div');
     div.className = 'cliente-card-historial';
-    
+
     let prestamosHtml = '';
     c.prestamos.forEach(p => {
       const est = calcularEstadoPrestamo(p);
@@ -1430,7 +1622,7 @@ function renderizarHistorial() {
       p.abonos.forEach(a => {
         const tipoTxt = a.tipo === 'capital' ? '🏦 CAPITAL' : '💰 CUOTA';
         abonosHtml += `<div style="font-size:0.85rem;color:var(--text-muted);margin-left:14px;padding:4px 0">
-          • ${a.fecha}: <strong>${formatoPeso(a.valor)}</strong> 
+          • ${a.fecha}: <strong>${formatoPeso(a.valor)}</strong>
           <span style="color:${a.tipo==='capital'?'var(--accent)':'var(--success)'}">[${tipoTxt}]</span>
           ${a.tipo==='capital' ? `<small> (${a.modo==='reducir-cuota'?'↓cuota':'↓plazo'})</small>`:''}
         </div>`;
@@ -1726,6 +1918,386 @@ function lanzarConfeti(tipo='cliente'){
   }
   document.body.appendChild(overlay);
   setTimeout(()=>overlay.remove(), 4000);
+}
+
+/* =========================================================
+   MÓDULO ADICIONAL: SCORING / LEGAL / CARTERA
+   ========================================================= */
+
+const CRITERIOS_SCORING = [
+  { id:'antiguedad',   nombre:'Antigüedad laboral/negocio', pregunta:'¿Más de 6 meses estable?',
+    opciones:['0 = No','1 = 3-6 meses','2 = >6 meses'], peso:2, obs:'Verificar con foto negocio / carta laboral' },
+  { id:'flujo',        nombre:'Flujo de caja', pregunta:'¿Ingresos - Gastos > 2x cuota?',
+    opciones:['0 = No cubre','1 = Justo','2 = Sobra 2x'], peso:3, obs:'Pedir extracto Nequi último mes' },
+  { id:'centrales',    nombre:'Centrales de riesgo', pregunta:'¿Reporte Datacrédito?',
+    opciones:['0 = Mora vigente','1 = Mora antigua','2 = Limpio'], peso:2, obs:'Consulta TransUnion $8.000' },
+  { id:'referencias',  nombre:'Referencias', pregunta:'¿2 referencias contestan y lo recomiendan?',
+    opciones:['0 = Ninguna','1 = Una','2 = Dos OK'], peso:2, obs:'Llamar tú mismo' },
+  { id:'arraigo',      nombre:'Arraigo / Garantía', pregunta:'¿Vive hace 1 año en Soledad? ¿Codeudor o garantía?',
+    opciones:['0 = Nada','1 = Arraigo','2 = Arraigo+Garantía'], peso:2, obs:'Foto cédula, recibo servicio público' },
+  { id:'comportamiento', nombre:'Comportamiento', pregunta:'¿Puntual en entrevista? ¿Documentos completos?',
+    opciones:['0 = Evasivo','1 = Dudas','2 = Claro y ordenado'], peso:1, obs:'Intuición entrenada' }
+];
+
+/* ============= SCORING ============= */
+function renderScoring(){
+  const cont = document.getElementById('scoring-tabla');
+  if(!cont) return;
+  let html = `<div style="overflow:auto"><table><thead><tr>
+     <th>Criterio</th><th>Pregunta</th><th>Puntaje (0-2)</th><th>Peso</th><th>Observación</th>
+   </tr></thead><tbody>`;
+  CRITERIOS_SCORING.forEach(c=>{
+    html += `<tr>
+      <td><strong>${c.nombre}</strong></td>
+      <td style="font-size:.9rem">${c.pregunta}</td>
+      <td><div class="scoring-radio">
+        ${c.opciones.map((op,i)=>`<label><input type="radio" name="sc-${c.id}" value="${i}" onchange="calcularScoring()"> ${op}</label>`).join('')}
+      </div></td>
+      <td><span class="capital-badge">x${c.peso}</span></td>
+      <td style="font-size:.8rem;color:var(--text-muted);max-width:180px">${c.obs}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  cont.innerHTML = html;
+  calcularScoring();
+}
+
+function calcularScoring(){
+  let total = 0, respondidos = 0;
+  CRITERIOS_SCORING.forEach(c=>{
+    const sel = document.querySelector(`input[name="sc-${c.id}"]:checked`);
+    if(sel){ total += parseInt(sel.value); respondidos++; }
+  });
+  const div = document.getElementById('scoring-resultado');
+  if(!div) return { total, respondidos, montoMax:0, decision:'' };
+  let decision, color, montoMax;
+  const faltan = CRITERIOS_SCORING.length - respondidos;
+  if(faltan > 0){
+    decision = `⏳ Faltan ${faltan} criterio(s) por evaluar`;
+    color = 'var(--text-muted)'; montoMax = 0;
+  } else if(total < 7){ decision = '❌ RECHAZADO — No prestar'; color='var(--danger)'; montoMax=0; }
+  else if(total <= 8){ decision='✅ Aprobado — Prestar solo $500.000'; color='var(--warning)'; montoMax=500000; }
+  else if(total <= 10){ decision='✅ Aprobado — Hasta $900.000'; color='var(--secondary)'; montoMax=900000; }
+  else { decision='✅ Aprobado — Hasta $1.000.000'; color='var(--success)'; montoMax=1000000; }
+
+  div.innerHTML = `
+    <div class="chart-wrap" style="border-left:4px solid ${color}">
+      <div class="capital-info-grid" style="margin-bottom:10px">
+        <div><small>Puntaje Total</small><strong style="font-size:1.7rem;color:${color}">${total} / 12</strong></div>
+        <div><small>Criterios evaluados</small><strong>${respondidos} / 6</strong></div>
+        <div><small>Monto máximo</small><strong>${montoMax?formatoPeso(montoMax):'—'}</strong></div>
+      </div>
+      <div style="font-weight:800;font-size:1.05rem;color:${color}">${decision}</div>
+      <small style="color:var(--text-muted)">Regla: &lt;7 RECHAZADO · 7-8 $500k · 9-10 $900k · 11-12 $1M</small>
+    </div>`;
+  return { total, respondidos, montoMax, decision };
+}
+
+function resetScoring(){
+  document.querySelectorAll('#scoring-tabla input[type=radio]').forEach(r=>r.checked=false);
+  document.getElementById('scoring-doc').value = '';
+  calcularScoring();
+}
+
+function guardarScoring(){
+  const r = calcularScoring();
+  if(r.respondidos < CRITERIOS_SCORING.length){ notificar('Completa los 6 criterios antes de guardar','error'); playSound('error'); return; }
+  const doc = document.getElementById('scoring-doc').value.trim() || '—';
+  const respuestas = {};
+  CRITERIOS_SCORING.forEach(c=>{
+    const sel = document.querySelector(`input[name="sc-${c.id}"]:checked`);
+    respuestas[c.id] = sel ? parseInt(sel.value) : 0;
+  });
+  if(!db.scorings) db.scorings = [];
+  db.scorings.unshift({
+    id: 'SC-'+Date.now(),
+    fecha: new Date().toISOString().replace('T',' ').slice(0,19),
+    doc, total: r.total, decision: r.decision, montoMax: r.montoMax, respuestas
+  });
+  guardarDB();
+  renderScoringHistorial();
+  notificar(`Scoring guardado (${r.total}/12)`, 'success');
+  playSound('cliente');
+}
+
+function renderScoringHistorial(){
+  const cont = document.getElementById('scoring-historial');
+  if(!cont) return;
+  const arr = db.scorings || [];
+  if(arr.length === 0){ cont.innerHTML = 'Sin registros aún.'; return; }
+  let html = '';
+  arr.slice(0,8).forEach(s=>{
+    const color = s.total<7?'var(--danger)': s.total<=8?'var(--warning)': s.total<=10?'var(--secondary)':'var(--success)';
+    html += `<div style="padding:10px 0;border-bottom:1px solid var(--glass-border);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div><strong>${s.doc}</strong> <small style="color:var(--text-muted)">${s.fecha}</small><br>
+      <small style="color:${color}">${s.decision}</small></div>
+      <div style="font-size:1.2rem;font-weight:800;color:${color}">${s.total}/12</div>
+    </div>`;
+  });
+  cont.innerHTML = html;
+}
+
+function aplicarScoringAlPrestamo(){
+  const r = calcularScoring();
+  if(r.respondidos < CRITERIOS_SCORING.length){ notificar('Completa los 6 criterios primero','error'); return; }
+  if(r.total < 7){ notificar('❌ Cliente RECHAZADO — No se puede prestar','error'); playSound('error'); return; }
+  switchTab('nuevo');
+  const docField = document.getElementById('scoring-doc').value.trim();
+  if(docField){ document.getElementById('cli-doc').value = docField; buscarClienteExistente(); }
+  document.getElementById('cli-monto').value = r.montoMax;
+  document.getElementById('cli-interes').value = 2.2;
+  calcularPreview();
+  notificar(`✅ Monto máximo permitido: ${formatoPeso(r.montoMax)}`, 'success');
+  playSound('cliente');
+}
+
+/* ============= NÚMEROS A LETRAS ============= */
+function numeroALetras(n){
+  n = Math.round(n);
+  if(n === 0) return 'CERO PESOS';
+  const u = ['','UNO','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE','DIEZ','ONCE','DOCE','TRECE','CATORCE','QUINCE','DIECISEIS','DIECISIETE','DIECIOCHO','DIECINUEVE','VEINTE'];
+  const d = ['','','VEINTE','TREINTA','CUARENTA','CINCUENTA','SESENTA','SETENTA','OCHENTA','NOVENTA'];
+  const c = ['','CIENTO','DOSCIENTOS','TRESCIENTOS','CUATROCIENTOS','QUINIENTOS','SEISCIENTOS','SETECIENTOS','OCHOCIENTOS','NOVECIENTOS'];
+  function sec(num){
+    if(num === 0) return '';
+    if(num <= 20) return u[num];
+    if(num < 30) return 'VEINTI' + u[num-20].toLowerCase();
+    if(num < 100) return d[Math.floor(num/10)] + (num%10 ? ' Y ' + u[num%10] : '');
+    if(num === 100) return 'CIEN';
+    if(num < 1000) return c[Math.floor(num/100)] + (num%100 ? ' ' + sec(num%100) : '');
+    if(num < 1000000){
+      const m = Math.floor(num/1000), r = num%1000;
+      return (m===1?'MIL':sec(m)+' MIL') + (r ? ' '+sec(r) : '');
+    }
+    if(num < 1000000000000){
+      const mm = Math.floor(num/1000000), r = num%1000000;
+      return (mm===1?'UN MILLON':sec(mm)+' MILLONES') + (r ? ' '+sec(r) : '');
+    }
+    return n.toLocaleString('es-CO');
+  }
+  return sec(n) + ' PESOS';
+}
+
+/* ============= LEGAL ============= */
+function actualizarSelectLegal(){
+  const sel = document.getElementById('legal-prestamo');
+  if(!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">-- Selecciona un préstamo --</option>';
+  (db.clientes||[]).forEach(c=>{
+    c.prestamos.forEach(p=>{
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${c.nombre} (${c.doc}) — ${formatoPeso(p.montoOriginal||p.monto)} [${p.id}]`;
+      sel.appendChild(opt);
+    });
+  });
+  if(prev) sel.value = prev;
+}
+
+function cargarDatosLegales(){
+  const id = document.getElementById('legal-prestamo').value;
+  if(!id) return;
+  for(const c of db.clientes){
+    const p = c.prestamos.find(x=>x.id===id);
+    if(p){
+      document.getElementById('legal-nombre').value = c.nombre;
+      document.getElementById('legal-cc').value = c.doc;
+      document.getElementById('legal-direccion').value = c.direccion || '';
+      document.getElementById('legal-celular').value = c.telefono || '';
+      document.getElementById('legal-email').value = c.email || '';
+      document.getElementById('legal-monto').value = p.montoOriginal || p.monto;
+      document.getElementById('legal-interes').value = p.interesMensual || 2.2;
+      document.getElementById('legal-plazo').value = p.plazoMeses || 2;
+      document.getElementById('legal-vencimiento').value = p.vencimiento || '';
+      return;
+    }
+  }
+}
+
+function obtenerDatosLegales(){
+  const nombre = document.getElementById('legal-nombre').value.trim();
+  const cc = document.getElementById('legal-cc').value.trim();
+  const direccion = document.getElementById('legal-direccion').value.trim();
+  if(!nombre || !cc || !direccion){
+    notificar('Completa nombre, cédula y dirección del cliente','error');
+    playSound('error'); return null;
+  }
+  return {
+    nombre, cc, direccion,
+    celular: document.getElementById('legal-celular').value.trim(),
+    email: document.getElementById('legal-email').value.trim(),
+    monto: parseFloat(document.getElementById('legal-monto').value) || 0,
+    interes: parseFloat(document.getElementById('legal-interes').value) || 2.2,
+    plazo: parseInt(document.getElementById('legal-plazo').value) || 2,
+    vencimiento: document.getElementById('legal-vencimiento').value,
+    mutuante: document.getElementById('legal-mutuante').value.trim() || '[TU NOMBRE COMPLETO]',
+    mutuanteCC: document.getElementById('legal-mutuante-cc').value.trim() || '[XXXX]',
+    nequi: document.getElementById('legal-nequi').value.trim() || '[NÚMERO]',
+    ciudad: document.getElementById('legal-ciudad').value.trim() || 'Soledad, Atlántico'
+  };
+}
+
+function mostrarDocumento(html, titulo){
+  document.getElementById('modal-legal-titulo').textContent = titulo;
+  document.getElementById('legal-preview-contenido').innerHTML = html;
+  document.getElementById('legal-print-area').innerHTML = html;
+  openModal('modal-legal-preview');
+}
+
+function imprimirLegal(){ setTimeout(()=>window.print(), 200); }
+
+function generarContrato(){
+  const d = obtenerDatosLegales(); if(!d) return;
+  const totalPagar = d.monto + (d.monto * d.interes * d.plazo / 100);
+  const cuotas = d.plazo * 2;
+  const valorCuota = totalPagar / cuotas;
+  const ea = ((Math.pow(1 + d.interes/100, 12) - 1) * 100).toFixed(2);
+  const html = `
+    <h1>Contrato de Mutuo con Interés (Recursos Propios)</h1>
+    <p>Entre los suscritos: <strong>EL MUTUANTE:</strong> ${d.mutuante}, CC ${d.mutuanteCC}, con domicilio en ${d.ciudad}, quien actúa con RECURSOS PROPIOS, no realiza captación masiva ni habitual de dineros del público, y <strong>EL MUTUARIO:</strong> ${d.nombre}, CC ${d.cc}, con domicilio en ${d.direccion}.</p>
+    <p><strong>CLÁUSULAS:</strong></p>
+    <p><strong>PRIMERA — OBJETO:</strong> El Mutuante entrega en calidad de mutuo o préstamo de consumo la suma de ${formatoPeso(d.monto)} (${numeroALetras(d.monto)}).</p>
+    <p><strong>SEGUNDA — INTERÉS:</strong> Interés remuneratorio del ${d.interes.toFixed(2)}% mensual, equivalente a ${ea}% E.A. aprox, siempre por debajo de la tasa de usura certificada por la Superintendencia Financiera de Colombia vigente al momento del desembolso. Interés moratorio: máximo legal permitido (usura).</p>
+    <p><strong>TERCERA — PLAZO Y FORMA DE PAGO:</strong> Plazo de ${d.plazo*30} días, pagaderos en ${cuotas} cuotas quincenales de ${formatoPeso(valorCuota)} cada una, mediante transferencia a Nequi/Bancolombia ${d.nequi} a nombre del Mutuante. Tabla de amortización anexa hace parte integral.</p>
+    <p><strong>CUARTA — DESTINO:</strong> Consumo personal / capital de trabajo.</p>
+    <p><strong>QUINTA — DECLARACIONES:</strong> El Mutuario declara que los recursos no provienen de actividades ilícitas (Ley 1708). Autoriza consulta y reporte en centrales de riesgo TransUnion y DataCrédito Experian conforme Ley 1266 de 2008.</p>
+    <p><strong>SEXTA — COBRANZA:</strong> Las gestiones de cobranza se harán en horarios permitidos por Ley 2300 de 2023 (Lunes a Viernes 7am-7pm, Sábados 8am-3pm). No domingos ni festivos.</p>
+    <p><strong>SÉPTIMA — GASTOS:</strong> Gastos de cobranza prejudicial y judicial a cargo del Mutuario en caso de mora.</p>
+    <p><strong>OCTAVA — JURISDICCIÓN:</strong> Soledad, Atlántico.</p>
+    <p>Se firma en dos ejemplares el ${new Date().toLocaleDateString('es-CO')}.</p>
+    <div class="firma">
+      <div>MUTUANTE<br>${d.mutuante}<br>CC: ${d.mutuanteCC}</div>
+      <div>MUTUARIO<br>${d.nombre}<br>CC: ${d.cc}</div>
+    </div>
+    <p style="margin-top:36px"><strong>TESTIGO / CODEUDOR (Si aplica):</strong><br>Nombre: ______________________________ CC: ______________ Tel: ______________</p>
+  `;
+  mostrarDocumento(html, '📄 Contrato de Mutuo');
+}
+
+function generarPagare(){
+  const d = obtenerDatosLegales(); if(!d) return;
+  const totalPagar = d.monto + (d.monto * d.interes * d.plazo / 100);
+  const fechaVenc = d.vencimiento || new Date(Date.now() + d.plazo*30*86400000).toISOString().split('T')[0];
+  const html = `
+    <h1>Pagaré No. ${Date.now().toString().slice(-6)}</h1>
+    <p>Yo, <strong>${d.nombre}</strong>, identificado con CC <strong>${d.cc}</strong>, me obligo a pagar incondicionalmente y a la orden de <strong>${d.mutuante}</strong>, CC ${d.mutuanteCC}, en ${d.ciudad}, la suma de ${formatoPeso(totalPagar)} (${numeroALetras(totalPagar)}), más intereses moratorios a la tasa máxima legal vigente.</p>
+    <p><strong>Fecha de vencimiento:</strong> ${fechaVenc}</p>
+    <p><strong>Fecha de creación:</strong> ${new Date().toISOString().split('T')[0]}</p>
+    <p><strong>Lugar de pago:</strong> ${d.ciudad}</p>
+    <div class="firma">
+      <div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}<br><br><small>Huella índice derecho</small></div>
+    </div>
+    <div class="page-break"></div>
+    <h2>CARTA DE INSTRUCCIONES</h2>
+    <p>Yo, <strong>${d.nombre}</strong>, autorizo de manera irrevocable al tenedor legítimo del presente pagaré para diligenciar los espacios en blanco conforme al contrato de mutuo, en caso de mora superior a <strong>5 días</strong>, por el saldo insoluto de capital más intereses remuneratorios y moratorios causados y gastos de cobranza.</p>
+    <p><strong>Instrucciones:</strong></p>
+    <p>1. Monto: saldo total adeudado según liquidación.<br>
+       2. Fecha vencimiento: fecha de diligenciamiento.<br>
+       3. Intereses moratorios: tasa máxima legal.</p>
+    <p><strong>Declaración:</strong> He recibido copia de este pagaré y de la carta de instrucciones.</p>
+    <div class="firma">
+      <div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}</div>
+    </div>
+  `;
+  mostrarDocumento(html, '🧾 Pagaré + Carta de Instrucciones');
+}
+
+function generarHabeas(){
+  const d = obtenerDatosLegales(); if(!d) return;
+  const html = `
+    <h1>Autorización Habeas Data y Consulta Centrales</h1>
+    <p>Yo, <strong>${d.nombre}</strong>, CC <strong>${d.cc}</strong>, autorizo de manera previa, expresa e informada a <strong>${d.mutuante}</strong> para consultar, reportar, procesar y divulgar mi información financiera, crediticia y comercial ante las centrales de riesgo <strong>TransUnion</strong> y <strong>Experian DataCrédito</strong>, con fines de análisis de riesgo crediticio y reporte de cumplimiento o incumplimiento, conforme <strong>Ley 1266 de 2008</strong> y <strong>Ley 1581 de 2012</strong>.</p>
+    <p>Autorizo contacto por WhatsApp, llamada y correo para gestiones de cobro en horarios legales.</p>
+    <p><strong>Correo:</strong> ${d.email || '____________________'}</p>
+    <p><strong>Celular:</strong> ${d.celular || '____________________'}</p>
+    <p><strong>Dirección:</strong> ${d.direccion}</p>
+    <div class="firma">
+      <div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}<br>Fecha: ${new Date().toLocaleDateString('es-CO')}</div>
+    </div>
+  `;
+  mostrarDocumento(html, '🔒 Autorización Habeas Data');
+}
+
+function generarKitCompleto(){
+  const d = obtenerDatosLegales(); if(!d) return;
+  const totalPagar = d.monto + (d.monto * d.interes * d.plazo / 100);
+  const cuotas = d.plazo * 2;
+  const valorCuota = totalPagar / cuotas;
+  const ea = ((Math.pow(1 + d.interes/100, 12) - 1) * 100).toFixed(2);
+  const fechaVenc = d.vencimiento || new Date(Date.now() + d.plazo*30*86400000).toISOString().split('T')[0];
+
+  const contrato = `
+    <h1>Contrato de Mutuo con Interés (Recursos Propios)</h1>
+    <p>Entre los suscritos: <strong>EL MUTUANTE:</strong> ${d.mutuante}, CC ${d.mutuanteCC}, con domicilio en ${d.ciudad}, quien actúa con RECURSOS PROPIOS, no realiza captación masiva ni habitual de dineros del público, y <strong>EL MUTUARIO:</strong> ${d.nombre}, CC ${d.cc}, con domicilio en ${d.direccion}.</p>
+    <p><strong>PRIMERA — OBJETO:</strong> El Mutuante entrega en calidad de mutuo la suma de ${formatoPeso(d.monto)} (${numeroALetras(d.monto)}).</p>
+    <p><strong>SEGUNDA — INTERÉS:</strong> ${d.interes.toFixed(2)}% mensual (${ea}% E.A.), por debajo de la usura. Mora: máximo legal.</p>
+    <p><strong>TERCERA — PLAZO:</strong> ${d.plazo*30} días, en ${cuotas} cuotas quincenales de ${formatoPeso(valorCuota)}, vía Nequi/Bancolombia ${d.nequi}.</p>
+    <p><strong>CUARTA — DESTINO:</strong> Consumo personal / capital de trabajo.</p>
+    <p><strong>QUINTA — DECLARACIONES:</strong> Recursos lícitos (Ley 1708). Autoriza centrales de riesgo (Ley 1266/2008).</p>
+    <p><strong>SEXTA — COBRANZA:</strong> Ley 2300 de 2023 (L-V 7am-7pm, Sáb 8am-3pm).</p>
+    <p><strong>SÉPTIMA — GASTOS:</strong> A cargo del Mutuario en caso de mora.</p>
+    <p><strong>OCTAVA — JURISDICCIÓN:</strong> ${d.ciudad}.</p>
+    <p>Firmado el ${new Date().toLocaleDateString('es-CO')}.</p>
+    <div class="firma">
+      <div>MUTUANTE<br>${d.mutuante}<br>CC: ${d.mutuanteCC}</div>
+      <div>MUTUARIO<br>${d.nombre}<br>CC: ${d.cc}</div>
+    </div>
+    <p style="margin-top:36px"><strong>TESTIGO / CODEUDOR:</strong> Nombre: ______________ CC: ______________ Tel: ______________</p>
+    <div class="page-break"></div>`;
+
+  const pagare = `
+    <h1>Pagaré No. ${Date.now().toString().slice(-6)}</h1>
+    <p>Yo, <strong>${d.nombre}</strong>, CC <strong>${d.cc}</strong>, me obligo a pagar a la orden de <strong>${d.mutuante}</strong>, CC ${d.mutuanteCC}, la suma de ${formatoPeso(totalPagar)} (${numeroALetras(totalPagar)}), más intereses moratorios a la tasa máxima legal.</p>
+    <p><strong>Vencimiento:</strong> ${fechaVenc} · <strong>Creación:</strong> ${new Date().toISOString().split('T')[0]} · <strong>Lugar:</strong> ${d.ciudad}</p>
+    <div class="firma"><div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}<br><br><small>Huella índice derecho</small></div></div>
+    <h2>Carta de Instrucciones</h2>
+    <p>Autorizo irrevocablemente al tenedor a diligenciar los espacios en blanco conforme al contrato, en caso de mora > 5 días, por saldo insoluto + intereses + gastos.</p>
+    <div class="firma"><div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}</div></div>
+    <div class="page-break"></div>`;
+
+  const habeas = `
+    <h1>Autorización Habeas Data</h1>
+    <p>Yo, <strong>${d.nombre}</strong>, CC <strong>${d.cc}</strong>, autorizo a <strong>${d.mutuante}</strong> para consultar, reportar y divulgar mi información ante TransUnion y Experian DataCrédito (Ley 1266/2008 y Ley 1581/2012). Autorizo contacto por WhatsApp, llamada y correo en horarios legales.</p>
+    <p>Correo: ${d.email || '____________'} · Celular: ${d.celular || '____________'}</p>
+    <div class="firma"><div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}<br>Fecha: ${new Date().toLocaleDateString('es-CO')}</div></div>
+    <div class="page-break"></div>`;
+
+  const tabla = `
+    <h1>Tabla de Amortización — Anexo</h1>
+    <p>Capital: ${formatoPeso(d.monto)} · Interés mensual: ${d.interes.toFixed(2)}% · Plazo: ${d.plazo} mes(es) · ${cuotas} cuotas quincenales.</p>
+    <table>
+      <thead><tr><th>N°</th><th>Saldo Inicial</th><th>Interés</th><th>Abono Capital</th><th>Cuota Total</th><th>Saldo Final</th></tr></thead>
+      <tbody>
+        ${(()=>{
+          let s = d.monto; let filas = '';
+          const capital = d.monto / cuotas;
+          const tasaQ = d.interes/2/100;
+          for(let i=1;i<=cuotas;i++){
+            const int = s * tasaQ;
+            const cuota = capital + int;
+            const sf = s - capital;
+            filas += `<tr><td>${i}</td><td>${formatoPeso(s)}</td><td>${formatoPeso(int)}</td><td>${formatoPeso(capital)}</td><td><strong>${formatoPeso(cuota)}</strong></td><td>${formatoPeso(Math.max(0,sf))}</td></tr>`;
+            s = sf;
+          }
+          return filas;
+        })()}
+      </tbody>
+    </table>
+    <p style="font-size:10px;text-align:center;margin-top:20px">Documento informativo. No incluye gastos de cobranza. Mora: tasa máxima legal, sin capitalizar intereses.</p>
+  `;
+
+  mostrarDocumento(contrato + pagare + habeas + tabla, '📦 Kit Legal Completo');
+}
+
+/* ============= INIT ADICIONAL ============= */
+function initModuloAdicional(){
+  try{
+    if(!db.scorings) db.scorings = [];
+    renderScoring();
+    renderScoringHistorial();
+    actualizarSelectLegal();
+  }catch(e){ console.warn('Init adicional:', e); }
 }
 
 // ===== INICIALIZACIÓN =====
