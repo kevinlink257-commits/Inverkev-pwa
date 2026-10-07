@@ -189,7 +189,19 @@
      #legal-print-area .firma div{border-top:1px solid #000;padding-top:4px;min-width:180px;text-align:center;font-size:11px}
      .page-break{page-break-after:always}
    }
- </style>
+
+.sync-status{display:inline-flex;align-items:center;gap:6px;max-width:210px;padding:6px 9px;border:1px solid var(--glass-border);border-radius:999px;background:rgba(255,255,255,.05);color:var(--text-muted);font-size:.72rem;line-height:1.1;white-space:nowrap;transition:all .2s ease}
+.sync-status .sync-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:var(--text-muted);box-shadow:0 0 0 3px rgba(148,163,184,.12)}
+.sync-status[data-status="syncing"] .sync-dot,.sync-status[data-status="checking"] .sync-dot{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.16);animation:sync-pulse 1.2s ease-in-out infinite}
+.sync-status[data-status="saved"]{color:#6ee7b7;border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.08)}
+.sync-status[data-status="saved"] .sync-dot{background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.16)}
+.sync-status[data-status="local"]{color:#fcd34d;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08)}
+.sync-status[data-status="local"] .sync-dot{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.16)}
+.sync-status[data-status="error"]{color:#fca5a5;border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08)}
+.sync-status[data-status="error"] .sync-dot{background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.16)}
+@keyframes sync-pulse{50%{opacity:.45;transform:scale(.8)}}
+@media(max-width:700px){.sync-status{order:3;width:100%;justify-content:center;max-width:none}.header-actions{flex-wrap:wrap}}
+</style>
  <link rel="manifest" href="./manifest.json">
  <meta name="theme-color" content="#581c87">
  <meta name="apple-mobile-web-app-capable" content="yes">
@@ -225,7 +237,7 @@
      <p id="subtitle-header">Sistema Avanzado de Crédito</p>
    </div>
  </div>
- <div class="header-actions"><button class="btn btn-ghost btn-sm" id="btn-sonido" onclick="toggleSonido()" title="Activar/Desactivar sonido">🔊 Sonido</button><button class="btn btn-ghost btn-sm" id="btn-instalar-pwa" style="display:none" onclick="instalarPWA()">📲 Instalar</button>
+ <div class="header-actions"><div id="sync-status" class="sync-status" data-status="checking" role="status" aria-live="polite" title="Comprobando conexión con Supabase"><span class="sync-dot"></span><span id="sync-status-text">Comprobando nube...</span></div><button class="btn btn-ghost btn-sm" id="btn-sonido" onclick="toggleSonido()" title="Activar/Desactivar sonido">🔊 Sonido</button><button class="btn btn-ghost btn-sm" id="btn-instalar-pwa" style="display:none" onclick="instalarPWA()">📲 Instalar</button>
    <div class="action-btns">
      <button class="btn btn-ghost btn-sm" onclick="exportarExcel()">📥 Exportar</button>
      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('buscar-global').focus()">🔍 Buscar</button>
@@ -713,6 +725,22 @@ let calcBuffer = '';
 let supabaseDisponible = true;
 let supabaseAvisado = false;
 
+function actualizarIndicadorSincronizacion(estado, detalle='') {
+  const indicador = document.getElementById('sync-status');
+  const texto = document.getElementById('sync-status-text');
+  if(!indicador || !texto) return;
+  const etiquetas = {
+    checking: 'Comprobando nube...',
+    syncing: 'Guardando en nube...',
+    saved: 'Guardado en la nube',
+    local: 'Guardado localmente',
+    error: 'Error de sincronización'
+  };
+  indicador.dataset.status = estado;
+  texto.textContent = etiquetas[estado] || estado;
+  indicador.title = detalle || etiquetas[estado] || estado;
+}
+
 function escapeHTML(value) {
   return String(value ?? '').replace(/[&<>'"]/g, char => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'
@@ -748,6 +776,7 @@ function migrarDatos() {
 }
 
 async function cargarDatosSupabase() {
+  actualizarIndicadorSincronizacion('checking', 'Comprobando conexión y datos en Supabase');
   const leerLocal = () => {
     try { return crearDBSegura(JSON.parse(localStorage.getItem('inverkev_db_v3') || 'null')); }
     catch(err) { console.warn('Datos locales corruptos; se restauran valores iniciales.', err); return crearDBSegura(null); }
@@ -757,11 +786,15 @@ async function cargarDatosSupabase() {
     const { data, error } = await supabaseClient.from('inverkev_data').select('*').limit(1);
     if(error) {
       supabaseDisponible = false;
+      actualizarIndicadorSincronizacion('local', 'Supabase no está disponible; los cambios se guardan en este dispositivo');
       if(!supabaseAvisado) { console.warn('Supabase no disponible; se usa almacenamiento local.', error.message || error); supabaseAvisado = true; }
-    } else if(data && data.length > 0 && data[0].payload) db = crearDBSegura(data[0].payload);
-    else if(!data || data.length === 0) await guardarDBSupabase();
+    } else if(data && data.length > 0 && data[0].payload) {
+      db = crearDBSegura(data[0].payload);
+      actualizarIndicadorSincronizacion('saved', 'Datos cargados correctamente desde Supabase');
+    } else if(!data || data.length === 0) await guardarDBSupabase();
   } catch(err) {
     supabaseDisponible = false;
+    actualizarIndicadorSincronizacion('local', 'Supabase no está disponible; los cambios se guardan en este dispositivo');
     if(!supabaseAvisado) { console.warn('Supabase no disponible; se usa almacenamiento local.', err); supabaseAvisado = true; }
   }
   db = crearDBSegura(db);
@@ -777,17 +810,25 @@ async function cargarDatosSupabase() {
 
 async function guardarDBSupabase() {
   localStorage.setItem('inverkev_db_v3', JSON.stringify(db));
-  if(!supabaseDisponible) return;
+  if(!supabaseDisponible) {
+    actualizarIndicadorSincronizacion('local', 'Supabase no está disponible; el cambio quedó guardado en este dispositivo');
+    return;
+  }
+  actualizarIndicadorSincronizacion('syncing', 'Enviando cambios a Supabase');
   try {
     const { error } = await supabaseClient
       .from('inverkev_data')
       .upsert({ id: 'main_state', payload: db, updated_at: new Date() });
     if(error) {
       supabaseDisponible = false;
+      actualizarIndicadorSincronizacion('error', `No se pudo guardar en Supabase: ${error.message || 'error desconocido'}`);
       if(!supabaseAvisado) { console.warn('Supabase no disponible; los cambios se guardan localmente.', error.message || error); supabaseAvisado = true; }
+      return;
     }
+    actualizarIndicadorSincronizacion('saved', 'Datos guardados correctamente en Supabase');
   } catch(err) {
     supabaseDisponible = false;
+    actualizarIndicadorSincronizacion('error', 'No se pudo guardar en Supabase; el cambio queda en localStorage');
     if(!supabaseAvisado) { console.warn('Supabase no disponible; los cambios se guardan localmente.', err); supabaseAvisado = true; }
   }
 }
