@@ -1579,55 +1579,68 @@ function registrarAbonoCapital(e) {
 }
 
 // ===== TICKETS =====
+function imprimirDocumentoBlanco(contenido, titulo='Comprobante Inverkev') {
+  const ventana = window.open('', '_blank');
+  if(!ventana) { notificar('Permite las ventanas emergentes para imprimir el comprobante', 'error'); return false; }
+  ventana.document.open();
+  ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHTML(titulo)}</title><style>
+    @page{size:auto;margin:10mm}
+    *{box-sizing:border-box}
+    html,body{background:#fff!important;color:#000!important;margin:0;padding:0;font-family:Arial,Helvetica,sans-serif}
+    body{width:100%;min-height:0}
+    .print-document{width:100%;max-width:760px;margin:0 auto;background:#fff;color:#000;padding:12px}
+    @media print{html,body{background:#fff!important;color:#000!important}.print-document{max-width:none;padding:0}}
+  </style></head><body><main class="print-document">${contenido}</main><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`);
+  ventana.document.close();
+  return true;
+}
+
 function imprimirTicket(cliente, prestamo, abono, nuevoSaldo) {
-  let area = document.getElementById('ticket-contenido');
-  if(!area) return;
   const est = calcularEstadoPrestamo(prestamo);
-  area.innerHTML = `
-    <div style="font-family:monospace;width:280px;margin:0 auto;color:#000;background:#fff;padding:15px;font-size:12px">
+  const contenido = `
+    <div style="font-family:monospace;max-width:360px;margin:0 auto;color:#000;background:#fff;padding:15px;font-size:12px">
       <div style="text-align:center;font-weight:bold;font-size:16px;margin-bottom:4px">INVERKEV S.A.S.</div>
       <div style="text-align:center;font-size:10px;margin-bottom:10px">Sistema de Crédito y Cobranza</div>
       <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;margin-bottom:8px">
-        <div><strong>Fecha:</strong> ${abono.fecha}</div>
-        <div><strong>Ticket ID:</strong> ${abono.id}</div>
-        <div><strong>Préstamo:</strong> ${prestamo.id}</div>
+        <div><strong>Fecha:</strong> ${escapeHTML(abono.fecha)}</div>
+        <div><strong>Ticket ID:</strong> ${escapeHTML(abono.id)}</div>
+        <div><strong>Préstamo:</strong> ${escapeHTML(prestamo.id)}</div>
         <div><strong>Tipo:</strong> ABONO A CUOTA</div>
       </div>
       <div style="margin-bottom:8px">
         <div><strong>Cliente:</strong> ${escapeHTML(cliente.nombre)}</div>
-        <div><strong>Doc:</strong> ${escapeHTML(cliente.doc)}</div>
-        <div><strong>Tel:</strong> ${escapeHTML(cliente.telefono || '-')}</div>
+        <div><strong>Documento:</strong> ${escapeHTML(cliente.doc)}</div>
+        <div><strong>Teléfono:</strong> ${escapeHTML(cliente.telefono || '-')}</div>
       </div>
       <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;margin-bottom:8px">
-        <div><strong>Valor Abono:</strong> ${formatoPeso(abono.valor)}</div>
-        <div><strong>Nuevo Saldo:</strong> ${formatoPeso(Math.max(0, nuevoSaldo))}</div>
+        <div><strong>Valor del abono:</strong> ${formatoPeso(abono.valor)}</div>
+        <div><strong>Nuevo saldo:</strong> ${formatoPeso(Math.max(0, nuevoSaldo))}</div>
+        <div><strong>Saldo antes:</strong> ${formatoPeso(est.saldo + abono.valor)}</div>
       </div>
       <div style="text-align:center;font-size:10px;margin-top:12px">¡Gracias por su pago puntual!<br>Conserve este comprobante.</div>
     </div>`;
-  window.print();
+  imprimirDocumentoBlanco(contenido, `Abono ${abono.id || ''}`);
 }
 
 function imprimirTicketCapital(cliente, prestamo, abono, nuevoSaldo) {
-  let area = document.getElementById('ticket-contenido');
-  if(!area) return;
   const modoTxt = abono.modo === 'reducir-cuota' ? 'REDUCIR CUOTA' : 'REDUCIR PLAZO';
-  area.innerHTML = `
-    <div style="font-family:monospace;width:300px;margin:0 auto;color:#000;background:#fff;padding:15px;font-size:12px">
+  const contenido = `
+    <div style="font-family:monospace;max-width:380px;margin:0 auto;color:#000;background:#fff;padding:15px;font-size:12px">
       <div style="text-align:center;font-weight:bold;font-size:16px;margin-bottom:4px">INVERKEV S.A.S.</div>
       <div style="text-align:center;font-size:10px;margin-bottom:10px">Sistema de Crédito y Cobranza</div>
       <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;margin-bottom:8px">
-        <div><strong>Fecha:</strong> ${abono.fecha}</div>
-        <div><strong>Ticket ID:</strong> ${abono.id}</div>
-        <div><strong>Préstamo:</strong> ${prestamo.id}</div>
-        <div><strong>Tipo:</strong> 🏦 ABONO A CAPITAL</div>
+        <div><strong>Fecha:</strong> ${escapeHTML(abono.fecha)}</div>
+        <div><strong>Ticket ID:</strong> ${escapeHTML(abono.id)}</div>
+        <div><strong>Préstamo:</strong> ${escapeHTML(prestamo.id)}</div>
+        <div><strong>Tipo:</strong> ABONO A CAPITAL</div>
       </div>
       <div style="margin-bottom:8px">
         <div><strong>Cliente:</strong> ${escapeHTML(cliente.nombre)}</div>
-        <div><strong>Doc:</strong> ${escapeHTML(cliente.doc)}</div>
-        <div><strong>Tel:</strong> ${escapeHTML(cliente.telefono || '-')}</div>
+        <div><strong>Documento:</strong> ${escapeHTML(cliente.doc)}</div>
+        <div><strong>Teléfono:</strong> ${escapeHTML(cliente.telefono || '-')}</div>
       </div>
       <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;margin-bottom:8px">
-        <div><strong>Valor Abono:</strong> ${formatoPeso(abono.valor)}</div>
+        <div><strong>Valor del abono:</strong> ${formatoPeso(abono.valor)}</div>
         <div><strong>Modo:</strong> ${modoTxt}</div>
       </div>
       <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;margin-bottom:8px">
@@ -1635,15 +1648,13 @@ function imprimirTicketCapital(cliente, prestamo, abono, nuevoSaldo) {
         <div><strong>Capital después:</strong> ${formatoPeso(abono.capitalDespues)}</div>
         <div><strong>Cuota antes:</strong> ${formatoPeso(abono.cuotaAntes)}</div>
         <div><strong>Cuota después:</strong> ${formatoPeso(abono.cuotaDespues)}</div>
-        <div><strong>Plazo antes:</strong> ${abono.plazoAntes} meses</div>
-        <div><strong>Plazo después:</strong> ${abono.plazoDespues} meses</div>
+        <div><strong>Plazo antes:</strong> ${escapeHTML(abono.plazoAntes)} meses</div>
+        <div><strong>Plazo después:</strong> ${escapeHTML(abono.plazoDespues)} meses</div>
+        <div><strong>Nuevo saldo:</strong> ${formatoPeso(Math.max(0, nuevoSaldo))}</div>
       </div>
-      <div style="border-top:1px dashed #000;padding:6px 0;margin-bottom:8px">
-        <div><strong>Nuevo Saldo:</strong> ${formatoPeso(Math.max(0, nuevoSaldo))}</div>
-      </div>
-      <div style="text-align:center;font-size:10px;margin-top:12px">🏦 Abono a Capital registrado<br>Gracias por su pago</div>
+      <div style="text-align:center;font-size:10px;margin-top:12px">Abono a capital registrado<br>Gracias por su pago.</div>
     </div>`;
-  window.print();
+  imprimirDocumentoBlanco(contenido, `Abono a capital ${abono.id || ''}`);
 }
 
 function reimprimirUltimoTicket(prestamoId) {
