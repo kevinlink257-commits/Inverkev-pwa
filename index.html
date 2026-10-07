@@ -710,6 +710,8 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 let db = { clientes: [], notas: [], scorings: [], config:{ blur:16, radius:16, modo:'glass', primary:'#581c87', secondary:'#38bdf8', accent:'#7c3aed', success:'#10b981', danger:'#ef4444', idioma:'es', presupuesto:10000000 } };
 let idiomaActual = 'es';
 let calcBuffer = '';
+let supabaseDisponible = true;
+let supabaseAvisado = false;
 
 function escapeHTML(value) {
   return String(value ?? '').replace(/[&<>'"]/g, char => ({
@@ -753,9 +755,15 @@ async function cargarDatosSupabase() {
   db = leerLocal();
   try {
     const { data, error } = await supabaseClient.from('inverkev_data').select('*').limit(1);
-    if(!error && data && data.length > 0 && data[0].payload) db = crearDBSegura(data[0].payload);
-    else if(!error && (!data || data.length === 0)) await guardarDBSupabase();
-  } catch(err) { console.warn('Supabase no disponible; se usa almacenamiento local.', err); }
+    if(error) {
+      supabaseDisponible = false;
+      if(!supabaseAvisado) { console.warn('Supabase no disponible; se usa almacenamiento local.', error.message || error); supabaseAvisado = true; }
+    } else if(data && data.length > 0 && data[0].payload) db = crearDBSegura(data[0].payload);
+    else if(!data || data.length === 0) await guardarDBSupabase();
+  } catch(err) {
+    supabaseDisponible = false;
+    if(!supabaseAvisado) { console.warn('Supabase no disponible; se usa almacenamiento local.', err); supabaseAvisado = true; }
+  }
   db = crearDBSegura(db);
   if(!db.config.presupuesto) db.config.presupuesto = 10000000;
   if(!db.notas) db.notas = [];
@@ -769,13 +777,18 @@ async function cargarDatosSupabase() {
 
 async function guardarDBSupabase() {
   localStorage.setItem('inverkev_db_v3', JSON.stringify(db));
+  if(!supabaseDisponible) return;
   try {
     const { error } = await supabaseClient
       .from('inverkev_data')
       .upsert({ id: 'main_state', payload: db, updated_at: new Date() });
-    if(error) console.error('Error al guardar en Supabase:', error);
+    if(error) {
+      supabaseDisponible = false;
+      if(!supabaseAvisado) { console.warn('Supabase no disponible; los cambios se guardan localmente.', error.message || error); supabaseAvisado = true; }
+    }
   } catch(err) {
-    console.error('Excepción al guardar:', err);
+    supabaseDisponible = false;
+    if(!supabaseAvisado) { console.warn('Supabase no disponible; los cambios se guardan localmente.', err); supabaseAvisado = true; }
   }
 }
 
