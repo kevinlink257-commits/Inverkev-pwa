@@ -1,5 +1,4 @@
-
-const CACHE_NAME = 'inverkev-pwa-v3';
+const CACHE_NAME = 'inverkev-pwa-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -9,37 +8,50 @@ const ASSETS = [
   './icon-180.png'
 ];
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-  );
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
   self.skipWaiting();
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
+self.addEventListener('activate', event => {
+  event.waitUntil(
     caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
     ))
   );
   self.clients.claim();
 });
 
-self.addEventListener('fetch', e => {
-  // Network first for CDN, cache first for local assets
-  if (e.request.url.includes('cdn.jsdelivr.net') || e.request.url.includes('googleapis')) {
-    e.respondWith(fetch(e.request).catch(()=> caches.match(e.request)));
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  const url = new URL(request.url);
+
+  // Never intercept non-GET or Supabase requests: data must not be cached as an API response.
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  // Keep the document fresh so deployments are picked up without a hard refresh.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request).then(cached => cached || caches.match('./index.html')))
+    );
     return;
   }
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      return cached || fetch(e.request).then(resp => {
-        // cache dynamic
-        return caches.open(CACHE_NAME).then(cache => {
-          cache.put(e.request, resp.clone());
-          return resp;
-        });
-      }).catch(()=> cached);
-    })
+
+  event.respondWith(
+    caches.match(request).then(cached => cached || fetch(request).then(response => {
+      if (response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+      }
+      return response;
+    }))
   );
 });

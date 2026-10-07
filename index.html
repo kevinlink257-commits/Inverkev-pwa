@@ -711,6 +711,25 @@ let db = { clientes: [], notas: [], scorings: [], config:{ blur:16, radius:16, m
 let idiomaActual = 'es';
 let calcBuffer = '';
 
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'
+  }[char]));
+}
+
+function crearDBSegura(value) {
+  const base = { clientes: [], notas: [], scorings: [], config:{ blur:16, radius:16, modo:'glass', primary:'#581c87', secondary:'#38bdf8', accent:'#7c3aed', success:'#10b981', danger:'#ef4444', idioma:'es', presupuesto:10000000 } };
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return base;
+  const config = value.config && typeof value.config === 'object' ? value.config : {};
+  return {
+    ...base, ...value,
+    clientes: Array.isArray(value.clientes) ? value.clientes : [],
+    notas: Array.isArray(value.notas) ? value.notas : [],
+    scorings: Array.isArray(value.scorings) ? value.scorings : [],
+    config: { ...base.config, ...config }
+  };
+}
+
 // ===== MIGRACIÓN DE DATOS =====
 function migrarDatos() {
   if(!db.clientes) db.clientes = [];
@@ -727,22 +746,17 @@ function migrarDatos() {
 }
 
 async function cargarDatosSupabase() {
+  const leerLocal = () => {
+    try { return crearDBSegura(JSON.parse(localStorage.getItem('inverkev_db_v3') || 'null')); }
+    catch(err) { console.warn('Datos locales corruptos; se restauran valores iniciales.', err); return crearDBSegura(null); }
+  };
+  db = leerLocal();
   try {
     const { data, error } = await supabaseClient.from('inverkev_data').select('*').limit(1);
-    if(error) {
-      let local = localStorage.getItem('inverkev_db_v3');
-      if(local) db = JSON.parse(local);
-    } else if(data && data.length > 0 && data[0].payload) {
-      db = data[0].payload;
-    } else {
-      let local = localStorage.getItem('inverkev_db_v3');
-      if(local) db = JSON.parse(local);
-      await guardarDBSupabase();
-    }
-  } catch(err) {
-    let local = localStorage.getItem('inverkev_db_v3');
-    if(local) db = JSON.parse(local);
-  }
+    if(!error && data && data.length > 0 && data[0].payload) db = crearDBSegura(data[0].payload);
+    else if(!error && (!data || data.length === 0)) await guardarDBSupabase();
+  } catch(err) { console.warn('Supabase no disponible; se usa almacenamiento local.', err); }
+  db = crearDBSegura(db);
   if(!db.config.presupuesto) db.config.presupuesto = 10000000;
   if(!db.notas) db.notas = [];
   if(!db.scorings) db.scorings = [];
@@ -771,7 +785,7 @@ function guardarDB(){
   actualizarSelectCapital(); renderizarNotas(); renderizarGraficos(); renderUltimosClientes();
 }
 
-function formatoPeso(n){ return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(n||0); }
+function formatoPeso(n){ return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number.isFinite(Number(n)) ? Number(n) : 0); }
 
 // ===== CÁLCULO DE ESTADO DEL PRÉSTAMO =====
 function calcularEstadoPrestamo(p) {
@@ -901,7 +915,7 @@ function instalarPWA(){
 }
 
 // ===== LOGIN =====
-const DEFAULT_PASS_HASH = '3ea6bbed16fbdb0f49692c52a1cc0df700ee7750dcecdc15465d47edfc8990b7';
+const DEFAULT_PASS_HASH = '7d5424692dc56084bdf80ae7fea3d546e86f7b409e97fe01afbd88cd242b0ac0';
 async function hashString(str){
   const data = new TextEncoder().encode(str);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -1018,9 +1032,9 @@ function renderizarDashboard() {
           : '';
 
         tr.innerHTML = `
-          <td><strong>${cliente.nombre}</strong><br><small style="color:var(--text-muted)">Doc: ${cliente.doc}</small></td>
+          <td><strong>${escapeHTML(cliente.nombre)}</strong><br><small style="color:var(--text-muted)">Doc: ${escapeHTML(cliente.doc)}</small></td>
           <td><strong>${formatoPeso(montoOriginal)}</strong><br><small style="color:var(--text-muted)">Total: ${formatoPeso(p.totalPagar)}</small>${capitalTag}</td>
-          <td>${p.vencimiento || '-'}</td>
+          <td>${escapeHTML(p.vencimiento || '-')}</td>
           <td>${cuotasPagadas} / ${totalCuotas}</td>
           <td><strong style="color:${est.saldo > 0 ? 'var(--secondary)' : 'var(--success)'}">${formatoPeso(est.saldo)}</strong></td>
           <td>${estadoBadge}</td>
@@ -1116,8 +1130,9 @@ function crearPrestamo(e){
   let plazo = parseInt(document.getElementById('cli-plazo').value);
   let vencimiento = document.getElementById('cli-vencimiento').value;
 
-  if(!doc || !nombre || !direccion || isNaN(monto) || isNaN(interesMensual) || isNaN(plazo) || !vencimiento) {
-    notificar('Completa todos los campos requeridos', 'error'); playSound('error'); return;
+  const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(vencimiento) && !Number.isNaN(new Date(`${vencimiento}T00:00:00`).getTime());
+  if(!doc || !nombre || !direccion || !Number.isFinite(monto) || monto <= 0 || !Number.isFinite(interesMensual) || interesMensual < 0 || !Number.isFinite(plazo) || plazo <= 0 || !fechaValida) {
+    notificar('Completa los campos requeridos con valores válidos', 'error'); playSound('error'); return;
   }
 
   let clienteExistente = db.clientes.find(c => c.doc === doc);
@@ -1206,7 +1221,7 @@ function mostrarSaldoAbono(){
         infoDiv.style.display = 'block';
         infoDiv.innerHTML = `
           <div class="capital-info-grid">
-            <div><small>Cliente</small><strong>${c.nombre}</strong></div>
+            <div><small>Cliente</small><strong>${escapeHTML(c.nombre)}</strong></div>
             <div><small>Total Pagar</small><strong>${formatoPeso(p.totalPagar)}</strong></div>
             <div><small>Saldo Actual</small><strong style="color:var(--secondary)">${formatoPeso(est.saldo)}</strong></div>
           </div>
@@ -1325,7 +1340,7 @@ function mostrarInfoCapital() {
       infoDiv.style.display = 'block';
       infoDiv.innerHTML = `
         <div class="capital-info-grid" style="margin-bottom:10px">
-          <div><small>Cliente</small><strong>${c.nombre}</strong></div>
+          <div><small>Cliente</small><strong>${escapeHTML(c.nombre)}</strong></div>
           <div><small>Capital Original</small><strong>${formatoPeso(est.montoOriginal)}</strong></div>
           <div><small>Capital Actual</small><strong style="color:var(--accent)">${formatoPeso(est.capitalActual)}</strong></div>
         </div>
@@ -1524,9 +1539,9 @@ function imprimirTicket(cliente, prestamo, abono, nuevoSaldo) {
         <div><strong>Tipo:</strong> ABONO A CUOTA</div>
       </div>
       <div style="margin-bottom:8px">
-        <div><strong>Cliente:</strong> ${cliente.nombre}</div>
-        <div><strong>Doc:</strong> ${cliente.doc}</div>
-        <div><strong>Tel:</strong> ${cliente.telefono || '-'}</div>
+        <div><strong>Cliente:</strong> ${escapeHTML(cliente.nombre)}</div>
+        <div><strong>Doc:</strong> ${escapeHTML(cliente.doc)}</div>
+        <div><strong>Tel:</strong> ${escapeHTML(cliente.telefono || '-')}</div>
       </div>
       <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;margin-bottom:8px">
         <div><strong>Valor Abono:</strong> ${formatoPeso(abono.valor)}</div>
@@ -1552,9 +1567,9 @@ function imprimirTicketCapital(cliente, prestamo, abono, nuevoSaldo) {
         <div><strong>Tipo:</strong> 🏦 ABONO A CAPITAL</div>
       </div>
       <div style="margin-bottom:8px">
-        <div><strong>Cliente:</strong> ${cliente.nombre}</div>
-        <div><strong>Doc:</strong> ${cliente.doc}</div>
-        <div><strong>Tel:</strong> ${cliente.telefono || '-'}</div>
+        <div><strong>Cliente:</strong> ${escapeHTML(cliente.nombre)}</div>
+        <div><strong>Doc:</strong> ${escapeHTML(cliente.doc)}</div>
+        <div><strong>Tel:</strong> ${escapeHTML(cliente.telefono || '-')}</div>
       </div>
       <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;margin-bottom:8px">
         <div><strong>Valor Abono:</strong> ${formatoPeso(abono.valor)}</div>
@@ -1622,7 +1637,7 @@ function renderizarHistorial() {
       p.abonos.forEach(a => {
         const tipoTxt = a.tipo === 'capital' ? '🏦 CAPITAL' : '💰 CUOTA';
         abonosHtml += `<div style="font-size:0.85rem;color:var(--text-muted);margin-left:14px;padding:4px 0">
-          • ${a.fecha}: <strong>${formatoPeso(a.valor)}</strong>
+          • ${escapeHTML(a.fecha)}: <strong>${formatoPeso(a.valor)}</strong>
           <span style="color:${a.tipo==='capital'?'var(--accent)':'var(--success)'}">[${tipoTxt}]</span>
           ${a.tipo==='capital' ? `<small> (${a.modo==='reducir-cuota'?'↓cuota':'↓plazo'})</small>`:''}
         </div>`;
@@ -1631,11 +1646,11 @@ function renderizarHistorial() {
       prestamosHtml += `
         <div style="background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:10px;padding:12px;margin-top:10px">
           <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
-            <div><strong>ID:</strong> ${p.id} | <strong>Capital:</strong> ${formatoPeso(est.montoOriginal)} | <strong>Total:</strong> ${formatoPeso(p.totalPagar)}</div>
+            <div><strong>ID:</strong> ${escapeHTML(p.id)} | <strong>Capital:</strong> ${formatoPeso(est.montoOriginal)} | <strong>Total:</strong> ${formatoPeso(p.totalPagar)}</div>
             <div><strong>Saldo:</strong> <span style="color:${pagadoTotal?'var(--success)':'var(--secondary)'}">${formatoPeso(est.saldo)}</span></div>
           </div>
           <div style="margin-top:6px;font-size:0.85rem;color:var(--text-muted)">
-            Vencimiento: ${p.vencimiento} | Plazo: ${est.plazoActual} meses | Cuota: ${formatoPeso(est.cuotaActual)}
+            Vencimiento: ${escapeHTML(p.vencimiento)} | Plazo: ${est.plazoActual} meses | Cuota: ${formatoPeso(est.cuotaActual)}
             ${est.capitalAbonado>0?` | <span style="color:var(--accent)">🏦 Cap. abonado: ${formatoPeso(est.capitalAbonado)}</span>`:''}
           </div>
           <div style="margin-top:8px"><strong>Abonos (${p.abonos.length}):</strong></div>
@@ -1646,8 +1661,8 @@ function renderizarHistorial() {
     div.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div>
-          <h3 style="font-size:1.1rem">${c.nombre}</h3>
-          <p style="color:var(--text-muted);font-size:0.85rem">Doc: ${c.doc} | Tel: ${c.telefono || 'N/A'} | Dir: ${c.direccion || 'N/A'}</p>
+          <h3 style="font-size:1.1rem">${escapeHTML(c.nombre)}</h3>
+          <p style="color:var(--text-muted);font-size:0.85rem">Doc: ${escapeHTML(c.doc)} | Tel: ${escapeHTML(c.telefono || 'N/A')} | Dir: ${escapeHTML(c.direccion || 'N/A')}</p>
         </div>
         <button class="btn btn-sm btn-danger" onclick="eliminarClienteCompleto('${c.doc}')">🗑️ Eliminar Cliente</button>
       </div>
@@ -1688,10 +1703,23 @@ function calcInput(val){
 }
 function calcClear(){ calcBuffer = ''; document.getElementById('calc-display').textContent = '0'; playSound('click'); }
 function calcDel(){ calcBuffer = calcBuffer.slice(0, -1); if(!calcBuffer) calcBuffer = '0'; document.getElementById('calc-display').textContent = calcBuffer; playSound('click'); }
+function evaluarExpresionSegura(expr){
+  const tokens = String(expr).match(/(?:\d+(?:\.\d+)?|[+\-*/%])/g) || [];
+  if(!tokens.length || tokens.join('') !== String(expr).replace(/\s/g,'')) throw new Error('Expresión inválida');
+  let index = 0;
+  const primario = () => {
+    const token = tokens[index++];
+    if(token === '+' || token === '-') { const value = primario(); return token === '-' ? -value : value; }
+    const value = Number(token); if(!Number.isFinite(value)) throw new Error('Número inválido'); return value;
+  };
+  const producto = () => { let value = primario(); while(['*','/','%'].includes(tokens[index])) { const op=tokens[index++], rhs=primario(); if((op==='/' || op==='%') && rhs===0) throw new Error('División por cero'); value=op==='*'?value*rhs:op==='/'?value/rhs:value%rhs; } return value; };
+  const suma = () => { let value = producto(); while(['+','-'].includes(tokens[index])) { const op=tokens[index++], rhs=producto(); value=op==='+'?value+rhs:value-rhs; } return value; };
+  const result = suma(); if(index !== tokens.length || !Number.isFinite(result)) throw new Error('Expresión inválida'); return result;
+}
 function calcEquals(){
   try {
-    let res = eval(calcBuffer.replace('×', '*').replace('÷', '/'));
-    calcBuffer = String(res);
+    const res = evaluarExpresionSegura(calcBuffer);
+    calcBuffer = String(Number(res.toFixed(10)));
     document.getElementById('calc-display').textContent = calcBuffer;
     playSound('success');
   } catch(e) { document.getElementById('calc-display').textContent = 'Error'; calcBuffer = ''; playSound('error'); }
@@ -1703,7 +1731,7 @@ function calcularCuotaPrestamo(){
   let cuotas = parseInt(document.getElementById('calc-cuotas').value) || 1;
   let modalidad = document.getElementById('calc-modalidad').value;
   let resDiv = document.getElementById('resultado-calc-prestamo');
-  if(monto <= 0) { if(resDiv) resDiv.style.display = 'none'; return; }
+  if(monto <= 0 || interesMensual < 0 || cuotas <= 0) { if(resDiv) resDiv.style.display = 'none'; return; }
   let totalPagar = 0, valorCuota = 0;
   if(modalidad === 'simple') {
     let totalInteres = monto * (interesMensual / 100) * cuotas;
@@ -1756,7 +1784,7 @@ function renderizarNotas(){
   if(db.notas.length === 0) { lista.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem">No hay notas guardadas.</p>'; return; }
   db.notas.forEach(n => {
     let div = document.createElement('div'); div.className = 'nota-item';
-    div.innerHTML = `<div><strong>${n.titulo}</strong><small style="display:block;color:var(--text-muted);font-size:0.75rem">${n.fecha}</small><p>${n.contenido}</p></div><button class="btn btn-sm btn-danger" onclick="eliminarNota('${n.id}')">🗑️</button>`;
+    div.innerHTML = `<div><strong>${escapeHTML(n.titulo)}</strong><small style="display:block;color:var(--text-muted);font-size:0.75rem">${n.fecha}</small><p>${escapeHTML(n.contenido)}</p></div><button class="btn btn-sm btn-danger" onclick="eliminarNota('${n.id}')">🗑️</button>`;
     lista.appendChild(div);
   });
 }
@@ -1829,7 +1857,7 @@ function renderUltimosClientes(){
   let html = '';
   ultimos.forEach(c => {
     let totalPrestamos = c.prestamos.length;
-    html += `<div style="margin-bottom:6px"><strong>${c.nombre}</strong> (${c.doc}) - ${totalPrestamos} préstamo(s)</div>`;
+    html += `<div style="margin-bottom:6px"><strong>${escapeHTML(c.nombre)}</strong> (${escapeHTML(c.doc)}) - ${totalPrestamos} préstamo(s)</div>`;
   });
   div.innerHTML = html;
 }
@@ -2029,7 +2057,7 @@ function renderScoringHistorial(){
   arr.slice(0,8).forEach(s=>{
     const color = s.total<7?'var(--danger)': s.total<=8?'var(--warning)': s.total<=10?'var(--secondary)':'var(--success)';
     html += `<div style="padding:10px 0;border-bottom:1px solid var(--glass-border);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
-      <div><strong>${s.doc}</strong> <small style="color:var(--text-muted)">${s.fecha}</small><br>
+      <div><strong>${escapeHTML(s.doc)}</strong> <small style="color:var(--text-muted)">${s.fecha}</small><br>
       <small style="color:${color}">${s.decision}</small></div>
       <div style="font-size:1.2rem;font-weight:800;color:${color}">${s.total}/12</div>
     </div>`;
@@ -2155,11 +2183,11 @@ function generarContrato(){
   const ea = ((Math.pow(1 + d.interes/100, 12) - 1) * 100).toFixed(2);
   const html = `
     <h1>Contrato de Mutuo con Interés (Recursos Propios)</h1>
-    <p>Entre los suscritos: <strong>EL MUTUANTE:</strong> ${d.mutuante}, CC ${d.mutuanteCC}, con domicilio en ${d.ciudad}, quien actúa con RECURSOS PROPIOS, no realiza captación masiva ni habitual de dineros del público, y <strong>EL MUTUARIO:</strong> ${d.nombre}, CC ${d.cc}, con domicilio en ${d.direccion}.</p>
+    <p>Entre los suscritos: <strong>EL MUTUANTE:</strong> ${escapeHTML(d.mutuante)}, CC ${escapeHTML(d.mutuanteCC)}, con domicilio en ${escapeHTML(d.ciudad)}, quien actúa con RECURSOS PROPIOS, no realiza captación masiva ni habitual de dineros del público, y <strong>EL MUTUARIO:</strong> ${escapeHTML(d.nombre)}, CC ${escapeHTML(d.cc)}, con domicilio en ${escapeHTML(d.direccion)}.</p>
     <p><strong>CLÁUSULAS:</strong></p>
     <p><strong>PRIMERA — OBJETO:</strong> El Mutuante entrega en calidad de mutuo o préstamo de consumo la suma de ${formatoPeso(d.monto)} (${numeroALetras(d.monto)}).</p>
     <p><strong>SEGUNDA — INTERÉS:</strong> Interés remuneratorio del ${d.interes.toFixed(2)}% mensual, equivalente a ${ea}% E.A. aprox, siempre por debajo de la tasa de usura certificada por la Superintendencia Financiera de Colombia vigente al momento del desembolso. Interés moratorio: máximo legal permitido (usura).</p>
-    <p><strong>TERCERA — PLAZO Y FORMA DE PAGO:</strong> Plazo de ${d.plazo*30} días, pagaderos en ${cuotas} cuotas quincenales de ${formatoPeso(valorCuota)} cada una, mediante transferencia a Nequi/Bancolombia ${d.nequi} a nombre del Mutuante. Tabla de amortización anexa hace parte integral.</p>
+    <p><strong>TERCERA — PLAZO Y FORMA DE PAGO:</strong> Plazo de ${d.plazo*30} días, pagaderos en ${cuotas} cuotas quincenales de ${formatoPeso(valorCuota)} cada una, mediante transferencia a Nequi/Bancolombia ${escapeHTML(d.nequi)} a nombre del Mutuante. Tabla de amortización anexa hace parte integral.</p>
     <p><strong>CUARTA — DESTINO:</strong> Consumo personal / capital de trabajo.</p>
     <p><strong>QUINTA — DECLARACIONES:</strong> El Mutuario declara que los recursos no provienen de actividades ilícitas (Ley 1708). Autoriza consulta y reporte en centrales de riesgo TransUnion y DataCrédito Experian conforme Ley 1266 de 2008.</p>
     <p><strong>SEXTA — COBRANZA:</strong> Las gestiones de cobranza se harán en horarios permitidos por Ley 2300 de 2023 (Lunes a Viernes 7am-7pm, Sábados 8am-3pm). No domingos ni festivos.</p>
@@ -2167,8 +2195,8 @@ function generarContrato(){
     <p><strong>OCTAVA — JURISDICCIÓN:</strong> Soledad, Atlántico.</p>
     <p>Se firma en dos ejemplares el ${new Date().toLocaleDateString('es-CO')}.</p>
     <div class="firma">
-      <div>MUTUANTE<br>${d.mutuante}<br>CC: ${d.mutuanteCC}</div>
-      <div>MUTUARIO<br>${d.nombre}<br>CC: ${d.cc}</div>
+      <div>MUTUANTE<br>${escapeHTML(d.mutuante)}<br>CC: ${escapeHTML(d.mutuanteCC)}</div>
+      <div>MUTUARIO<br>${escapeHTML(d.nombre)}<br>CC: ${escapeHTML(d.cc)}</div>
     </div>
     <p style="margin-top:36px"><strong>TESTIGO / CODEUDOR (Si aplica):</strong><br>Nombre: ______________________________ CC: ______________ Tel: ______________</p>
   `;
@@ -2181,23 +2209,23 @@ function generarPagare(){
   const fechaVenc = d.vencimiento || new Date(Date.now() + d.plazo*30*86400000).toISOString().split('T')[0];
   const html = `
     <h1>Pagaré No. ${Date.now().toString().slice(-6)}</h1>
-    <p>Yo, <strong>${d.nombre}</strong>, identificado con CC <strong>${d.cc}</strong>, me obligo a pagar incondicionalmente y a la orden de <strong>${d.mutuante}</strong>, CC ${d.mutuanteCC}, en ${d.ciudad}, la suma de ${formatoPeso(totalPagar)} (${numeroALetras(totalPagar)}), más intereses moratorios a la tasa máxima legal vigente.</p>
+    <p>Yo, <strong>${escapeHTML(d.nombre)}</strong>, identificado con CC <strong>${escapeHTML(d.cc)}</strong>, me obligo a pagar incondicionalmente y a la orden de <strong>${escapeHTML(d.mutuante)}</strong>, CC ${escapeHTML(d.mutuanteCC)}, en ${escapeHTML(d.ciudad)}, la suma de ${formatoPeso(totalPagar)} (${numeroALetras(totalPagar)}), más intereses moratorios a la tasa máxima legal vigente.</p>
     <p><strong>Fecha de vencimiento:</strong> ${fechaVenc}</p>
     <p><strong>Fecha de creación:</strong> ${new Date().toISOString().split('T')[0]}</p>
-    <p><strong>Lugar de pago:</strong> ${d.ciudad}</p>
+    <p><strong>Lugar de pago:</strong> ${escapeHTML(d.ciudad)}</p>
     <div class="firma">
-      <div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}<br><br><small>Huella índice derecho</small></div>
+      <div>FIRMA<br>${escapeHTML(d.nombre)}<br>CC: ${escapeHTML(d.cc)}<br><br><small>Huella índice derecho</small></div>
     </div>
     <div class="page-break"></div>
     <h2>CARTA DE INSTRUCCIONES</h2>
-    <p>Yo, <strong>${d.nombre}</strong>, autorizo de manera irrevocable al tenedor legítimo del presente pagaré para diligenciar los espacios en blanco conforme al contrato de mutuo, en caso de mora superior a <strong>5 días</strong>, por el saldo insoluto de capital más intereses remuneratorios y moratorios causados y gastos de cobranza.</p>
+    <p>Yo, <strong>${escapeHTML(d.nombre)}</strong>, autorizo de manera irrevocable al tenedor legítimo del presente pagaré para diligenciar los espacios en blanco conforme al contrato de mutuo, en caso de mora superior a <strong>5 días</strong>, por el saldo insoluto de capital más intereses remuneratorios y moratorios causados y gastos de cobranza.</p>
     <p><strong>Instrucciones:</strong></p>
     <p>1. Monto: saldo total adeudado según liquidación.<br>
        2. Fecha vencimiento: fecha de diligenciamiento.<br>
        3. Intereses moratorios: tasa máxima legal.</p>
     <p><strong>Declaración:</strong> He recibido copia de este pagaré y de la carta de instrucciones.</p>
     <div class="firma">
-      <div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}</div>
+      <div>FIRMA<br>${escapeHTML(d.nombre)}<br>CC: ${escapeHTML(d.cc)}</div>
     </div>
   `;
   mostrarDocumento(html, '🧾 Pagaré + Carta de Instrucciones');
@@ -2207,13 +2235,13 @@ function generarHabeas(){
   const d = obtenerDatosLegales(); if(!d) return;
   const html = `
     <h1>Autorización Habeas Data y Consulta Centrales</h1>
-    <p>Yo, <strong>${d.nombre}</strong>, CC <strong>${d.cc}</strong>, autorizo de manera previa, expresa e informada a <strong>${d.mutuante}</strong> para consultar, reportar, procesar y divulgar mi información financiera, crediticia y comercial ante las centrales de riesgo <strong>TransUnion</strong> y <strong>Experian DataCrédito</strong>, con fines de análisis de riesgo crediticio y reporte de cumplimiento o incumplimiento, conforme <strong>Ley 1266 de 2008</strong> y <strong>Ley 1581 de 2012</strong>.</p>
+    <p>Yo, <strong>${escapeHTML(d.nombre)}</strong>, CC <strong>${escapeHTML(d.cc)}</strong>, autorizo de manera previa, expresa e informada a <strong>${escapeHTML(d.mutuante)}</strong> para consultar, reportar, procesar y divulgar mi información financiera, crediticia y comercial ante las centrales de riesgo <strong>TransUnion</strong> y <strong>Experian DataCrédito</strong>, con fines de análisis de riesgo crediticio y reporte de cumplimiento o incumplimiento, conforme <strong>Ley 1266 de 2008</strong> y <strong>Ley 1581 de 2012</strong>.</p>
     <p>Autorizo contacto por WhatsApp, llamada y correo para gestiones de cobro en horarios legales.</p>
-    <p><strong>Correo:</strong> ${d.email || '____________________'}</p>
-    <p><strong>Celular:</strong> ${d.celular || '____________________'}</p>
-    <p><strong>Dirección:</strong> ${d.direccion}</p>
+    <p><strong>Correo:</strong> ${escapeHTML(d.email || '____________________')}</p>
+    <p><strong>Celular:</strong> ${escapeHTML(d.celular || '____________________')}</p>
+    <p><strong>Dirección:</strong> ${escapeHTML(d.direccion)}</p>
     <div class="firma">
-      <div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}<br>Fecha: ${new Date().toLocaleDateString('es-CO')}</div>
+      <div>FIRMA<br>${escapeHTML(d.nombre)}<br>CC: ${escapeHTML(d.cc)}<br>Fecha: ${new Date().toLocaleDateString('es-CO')}</div>
     </div>
   `;
   mostrarDocumento(html, '🔒 Autorización Habeas Data');
@@ -2229,38 +2257,38 @@ function generarKitCompleto(){
 
   const contrato = `
     <h1>Contrato de Mutuo con Interés (Recursos Propios)</h1>
-    <p>Entre los suscritos: <strong>EL MUTUANTE:</strong> ${d.mutuante}, CC ${d.mutuanteCC}, con domicilio en ${d.ciudad}, quien actúa con RECURSOS PROPIOS, no realiza captación masiva ni habitual de dineros del público, y <strong>EL MUTUARIO:</strong> ${d.nombre}, CC ${d.cc}, con domicilio en ${d.direccion}.</p>
+    <p>Entre los suscritos: <strong>EL MUTUANTE:</strong> ${escapeHTML(d.mutuante)}, CC ${escapeHTML(d.mutuanteCC)}, con domicilio en ${escapeHTML(d.ciudad)}, quien actúa con RECURSOS PROPIOS, no realiza captación masiva ni habitual de dineros del público, y <strong>EL MUTUARIO:</strong> ${escapeHTML(d.nombre)}, CC ${escapeHTML(d.cc)}, con domicilio en ${escapeHTML(d.direccion)}.</p>
     <p><strong>PRIMERA — OBJETO:</strong> El Mutuante entrega en calidad de mutuo la suma de ${formatoPeso(d.monto)} (${numeroALetras(d.monto)}).</p>
     <p><strong>SEGUNDA — INTERÉS:</strong> ${d.interes.toFixed(2)}% mensual (${ea}% E.A.), por debajo de la usura. Mora: máximo legal.</p>
-    <p><strong>TERCERA — PLAZO:</strong> ${d.plazo*30} días, en ${cuotas} cuotas quincenales de ${formatoPeso(valorCuota)}, vía Nequi/Bancolombia ${d.nequi}.</p>
+    <p><strong>TERCERA — PLAZO:</strong> ${d.plazo*30} días, en ${cuotas} cuotas quincenales de ${formatoPeso(valorCuota)}, vía Nequi/Bancolombia ${escapeHTML(d.nequi)}.</p>
     <p><strong>CUARTA — DESTINO:</strong> Consumo personal / capital de trabajo.</p>
     <p><strong>QUINTA — DECLARACIONES:</strong> Recursos lícitos (Ley 1708). Autoriza centrales de riesgo (Ley 1266/2008).</p>
     <p><strong>SEXTA — COBRANZA:</strong> Ley 2300 de 2023 (L-V 7am-7pm, Sáb 8am-3pm).</p>
     <p><strong>SÉPTIMA — GASTOS:</strong> A cargo del Mutuario en caso de mora.</p>
-    <p><strong>OCTAVA — JURISDICCIÓN:</strong> ${d.ciudad}.</p>
+    <p><strong>OCTAVA — JURISDICCIÓN:</strong> ${escapeHTML(d.ciudad)}.</p>
     <p>Firmado el ${new Date().toLocaleDateString('es-CO')}.</p>
     <div class="firma">
-      <div>MUTUANTE<br>${d.mutuante}<br>CC: ${d.mutuanteCC}</div>
-      <div>MUTUARIO<br>${d.nombre}<br>CC: ${d.cc}</div>
+      <div>MUTUANTE<br>${escapeHTML(d.mutuante)}<br>CC: ${escapeHTML(d.mutuanteCC)}</div>
+      <div>MUTUARIO<br>${escapeHTML(d.nombre)}<br>CC: ${escapeHTML(d.cc)}</div>
     </div>
     <p style="margin-top:36px"><strong>TESTIGO / CODEUDOR:</strong> Nombre: ______________ CC: ______________ Tel: ______________</p>
     <div class="page-break"></div>`;
 
   const pagare = `
     <h1>Pagaré No. ${Date.now().toString().slice(-6)}</h1>
-    <p>Yo, <strong>${d.nombre}</strong>, CC <strong>${d.cc}</strong>, me obligo a pagar a la orden de <strong>${d.mutuante}</strong>, CC ${d.mutuanteCC}, la suma de ${formatoPeso(totalPagar)} (${numeroALetras(totalPagar)}), más intereses moratorios a la tasa máxima legal.</p>
-    <p><strong>Vencimiento:</strong> ${fechaVenc} · <strong>Creación:</strong> ${new Date().toISOString().split('T')[0]} · <strong>Lugar:</strong> ${d.ciudad}</p>
-    <div class="firma"><div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}<br><br><small>Huella índice derecho</small></div></div>
+    <p>Yo, <strong>${escapeHTML(d.nombre)}</strong>, CC <strong>${escapeHTML(d.cc)}</strong>, me obligo a pagar a la orden de <strong>${escapeHTML(d.mutuante)}</strong>, CC ${escapeHTML(d.mutuanteCC)}, la suma de ${formatoPeso(totalPagar)} (${numeroALetras(totalPagar)}), más intereses moratorios a la tasa máxima legal.</p>
+    <p><strong>Vencimiento:</strong> ${fechaVenc} · <strong>Creación:</strong> ${new Date().toISOString().split('T')[0]} · <strong>Lugar:</strong> ${escapeHTML(d.ciudad)}</p>
+    <div class="firma"><div>FIRMA<br>${escapeHTML(d.nombre)}<br>CC: ${escapeHTML(d.cc)}<br><br><small>Huella índice derecho</small></div></div>
     <h2>Carta de Instrucciones</h2>
     <p>Autorizo irrevocablemente al tenedor a diligenciar los espacios en blanco conforme al contrato, en caso de mora > 5 días, por saldo insoluto + intereses + gastos.</p>
-    <div class="firma"><div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}</div></div>
+    <div class="firma"><div>FIRMA<br>${escapeHTML(d.nombre)}<br>CC: ${escapeHTML(d.cc)}</div></div>
     <div class="page-break"></div>`;
 
   const habeas = `
     <h1>Autorización Habeas Data</h1>
-    <p>Yo, <strong>${d.nombre}</strong>, CC <strong>${d.cc}</strong>, autorizo a <strong>${d.mutuante}</strong> para consultar, reportar y divulgar mi información ante TransUnion y Experian DataCrédito (Ley 1266/2008 y Ley 1581/2012). Autorizo contacto por WhatsApp, llamada y correo en horarios legales.</p>
-    <p>Correo: ${d.email || '____________'} · Celular: ${d.celular || '____________'}</p>
-    <div class="firma"><div>FIRMA<br>${d.nombre}<br>CC: ${d.cc}<br>Fecha: ${new Date().toLocaleDateString('es-CO')}</div></div>
+    <p>Yo, <strong>${escapeHTML(d.nombre)}</strong>, CC <strong>${escapeHTML(d.cc)}</strong>, autorizo a <strong>${escapeHTML(d.mutuante)}</strong> para consultar, reportar y divulgar mi información ante TransUnion y Experian DataCrédito (Ley 1266/2008 y Ley 1581/2012). Autorizo contacto por WhatsApp, llamada y correo en horarios legales.</p>
+    <p>Correo: ${escapeHTML(d.email || '____________')} · Celular: ${escapeHTML(d.celular || '____________')}</p>
+    <div class="firma"><div>FIRMA<br>${escapeHTML(d.nombre)}<br>CC: ${escapeHTML(d.cc)}<br>Fecha: ${new Date().toLocaleDateString('es-CO')}</div></div>
     <div class="page-break"></div>`;
 
   const tabla = `
@@ -2302,6 +2330,7 @@ function initModuloAdicional(){
 
 // ===== INICIALIZACIÓN =====
 window.onload = async function(){
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(err => console.warn('Service worker no disponible:', err));
   await cargarDatosSupabase();
   actualizarVencimientoPorMeses();
   if(sessionStorage.getItem('inverkev_logged_in') === 'true') {

@@ -22,10 +22,12 @@ Clave actual: Inverkev#2026! (cámbiala generando nuevo hash)
 - sw.js - Service Worker
 - icon-192.png / icon-512.png / icon-180.png - Iconos
 
-## 🌐 Deploy en Netlify
-Conecta este repo en Netlify:
+## 🌐 Deploy en Vercel
+Conecta este repositorio en Vercel como sitio estático:
 - Build command: (vacío)
-- Publish directory: /
+- Output directory: /
+
+> Seguridad: la clave inicial aparece documentada únicamente para la configuración original. Cámbiala antes de usar la aplicación en producción y no publiques credenciales en el repositorio.
 
 ## 🔄 Cambiar clave
 1. Genera SHA-256 de tu nueva clave en https://emn178.github.io/online-tools/sha256.html
