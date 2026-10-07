@@ -14,7 +14,7 @@ Sistema Avanzado de Crédito y Cobranza - PWA instalable con login seguro.
 
 ## 🔐 Login
 La clave no está en el código, solo su hash SHA-256.
-Clave actual: Inverkev#2026! (cámbiala generando nuevo hash)
+Clave actual: Inverkev$2026! (cámbiala generando un nuevo hash antes de publicar el proyecto)
 
 ## 📦 Archivos
 - index.html - App principal
