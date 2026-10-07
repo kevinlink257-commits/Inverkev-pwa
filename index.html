@@ -1096,7 +1096,8 @@ function renderizarDashboard() {
             <div class="action-btns">
               ${!pagadoTotal ? `<button class="btn btn-sm btn-success" onclick="seleccionarYIrAbono('${p.id}')">💰</button>` : ''}
               ${!pagadoTotal ? `<button class="btn btn-sm btn-primary" onclick="seleccionarYIrCapital('${p.id}')" title="Abono a capital">🏦</button>` : ''}
-              <button class="btn btn-sm btn-ghost" onclick="reimprimirUltimoTicket('${p.id}')">🧾</button>
+              <button class="btn btn-sm btn-ghost" onclick="reimprimirUltimoTicket('${p.id}')" title="Imprimir último recibo">🧾</button>
+              <button class="btn btn-sm btn-ghost" onclick="imprimirHistorialCliente(decodeURIComponent('${encodeURIComponent(cliente.doc)}'))" title="Imprimir historial completo">🖨️</button>
               <button class="btn btn-sm btn-danger" onclick="eliminarPrestamo('${cliente.doc}', '${p.id}')">🗑️</button>
             </div>
           </td>
@@ -1731,16 +1732,77 @@ function renderizarHistorial() {
 function imprimirHistorialCliente(doc) {
   const cliente = db.clientes.find(c => String(c.doc) === String(doc));
   if(!cliente) { notificar('No se encontró el cliente', 'error'); return; }
+  const prestamos = Array.isArray(cliente.prestamos) ? cliente.prestamos : [];
   const ventana = window.open('', '_blank');
   if(!ventana) { notificar('Permite las ventanas emergentes para imprimir el historial', 'error'); return; }
-  const prestamos = cliente.prestamos.map(p => {
+
+  const filasPrestamos = prestamos.map((p, indice) => {
     const est = calcularEstadoPrestamo(p);
-    const abonos = (p.abonos || []).length
-      ? `<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Valor</th></tr></thead><tbody>${p.abonos.map(a => `<tr><td>${escapeHTML(a.fecha)}</td><td>${a.tipo === 'capital' ? 'Abono a capital' : 'Abono a cuota'}</td><td>${formatoPeso(a.valor)}</td></tr>`).join('')}</tbody></table>`
-      : '<p>Sin abonos registrados.</p>';
-    return `<section class="prestamo"><h2>Préstamo ${escapeHTML(p.id)}</h2><p><strong>Fecha de creación:</strong> ${escapeHTML(p.fechaCreacion || '-')} &nbsp; <strong>Vencimiento:</strong> ${escapeHTML(p.vencimiento || '-')}</p><p><strong>Capital original:</strong> ${formatoPeso(est.montoOriginal)} &nbsp; <strong>Total pactado:</strong> ${formatoPeso(p.totalPagar)}</p><p><strong>Saldo actual:</strong> ${formatoPeso(est.saldo)} &nbsp; <strong>Capital abonado:</strong> ${formatoPeso(est.capitalAbonado)}</p><h3>Abonos registrados</h3>${abonos}</section>`;
+    const mora = est.moraInfo || { diasMora: 0, interesMora: 0 };
+    const abonos = Array.isArray(p.abonos) ? p.abonos : [];
+    const filasAbonos = abonos.length
+      ? abonos.map(a => `<tr><td>${escapeHTML(a.id || '-')}</td><td>${escapeHTML(a.fecha || '-')}</td><td>${a.tipo === 'capital' ? 'Abono a capital' : 'Abono a cuota'}</td><td>${escapeHTML(a.modo || '-')}</td><td class="money">${formatoPeso(a.valor)}</td></tr>`).join('')
+      : '<tr><td colspan="5" class="muted">Sin abonos registrados</td></tr>';
+    const estado = est.saldo <= 0 ? 'Pagado' : mora.diasMora > 0 ? `En mora (${mora.diasMora} días)` : 'Al día';
+    return `<section class="loan-block">
+      <h2>Préstamo ${indice + 1}: ${escapeHTML(p.id || '-')}</h2>
+      <div class="grid">
+        <div><b>Fecha de creación</b><span>${escapeHTML(p.fechaCreacion || '-')}</span></div>
+        <div><b>Vencimiento</b><span>${escapeHTML(p.vencimiento || '-')}</span></div>
+        <div><b>Capital original</b><span>${formatoPeso(est.montoOriginal)}</span></div>
+        <div><b>Interés mensual</b><span>${Number(p.interesMensual || 0).toFixed(2)}%</span></div>
+        <div><b>Interés total pactado</b><span>${Number(p.interesTotalPct || 0).toFixed(2)}%</span></div>
+        <div><b>Plazo original</b><span>${escapeHTML(p.plazoOriginal || p.plazoMeses || '-')} meses</span></div>
+        <div><b>Plazo actual</b><span>${escapeHTML(est.plazoActual || '-')} meses</span></div>
+        <div><b>Cuota actual</b><span>${formatoPeso(est.cuotaActual)}</span></div>
+        <div><b>Total pactado</b><span>${formatoPeso(p.totalPagar)}</span></div>
+        <div><b>Total abonado</b><span>${formatoPeso(est.totalAbonos)}</span></div>
+        <div><b>Capital abonado</b><span>${formatoPeso(est.capitalAbonado)}</span></div>
+        <div><b>Capital actual</b><span>${formatoPeso(est.capitalActual)}</span></div>
+        <div><b>Saldo pendiente</b><span>${formatoPeso(est.saldo)}</span></div>
+        <div><b>Interés de mora</b><span>${formatoPeso(mora.interesMora)}</span></div>
+        <div><b>Estado</b><span>${estado}</span></div>
+      </div>
+      <h3>Abonos realizados (${abonos.length})</h3>
+      <table><thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Modo</th><th>Valor</th></tr></thead><tbody>${filasAbonos}</tbody></table>
+    </section>`;
   }).join('');
-  ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Historial de ${escapeHTML(cliente.nombre)}</title><style>body{font-family:Arial,sans-serif;color:#111;max-width:900px;margin:32px auto;padding:0 20px}h1{font-size:24px;border-bottom:2px solid #222;padding-bottom:10px}h2{font-size:18px;margin-bottom:8px}.datos{background:#f3f4f6;padding:12px;margin-bottom:24px}.prestamo{border:1px solid #bbb;padding:16px;margin:18px 0;page-break-inside:avoid}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #bbb;padding:7px;text-align:left}th{background:#eee}@media print{body{margin:0;max-width:none}.prestamo{break-inside:avoid}}</style></head><body><h1>Historial de préstamos</h1><div class="datos"><strong>Cliente:</strong> ${escapeHTML(cliente.nombre)}<br><strong>Documento:</strong> ${escapeHTML(cliente.doc)}<br><strong>Teléfono:</strong> ${escapeHTML(cliente.telefono || '-')}<br><strong>Dirección:</strong> ${escapeHTML(cliente.direccion || '-')}</div>${prestamos || '<p>Sin préstamos registrados.</p>'}<script>window.onload=()=>window.print();<\/script></body></html>`);
+
+  const totalAbonos = prestamos.reduce((total, p) => total + (Array.isArray(p.abonos) ? p.abonos.length : 0), 0);
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Historial - ${escapeHTML(cliente.nombre)}</title><style>
+    @page{size:auto;margin:12mm}
+    *{box-sizing:border-box}
+    html,body{background:#fff!important;color:#111!important;margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.4}
+    body{max-width:980px;margin:0 auto;padding:0}
+    h1{font-size:20px;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #111}
+    h2{font-size:15px;margin:0 0 10px;border-bottom:1px solid #999;padding-bottom:5px}
+    h3{font-size:12px;margin:14px 0 6px}
+    .client-data{border:1px solid #aaa;padding:10px;margin-bottom:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px}
+    .client-data b,.grid b{display:block;font-size:9px;text-transform:uppercase;color:#555}
+    .client-data span,.grid span{display:block;font-size:11px}
+    .summary{margin:8px 0 14px;font-weight:bold}
+    .loan-block{border:1px solid #999;padding:10px;margin:0 0 14px;break-inside:avoid;page-break-inside:avoid}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px 12px}
+    table{width:100%;border-collapse:collapse;break-inside:auto}
+    thead{display:table-header-group}
+    tr{break-inside:avoid;page-break-inside:avoid}
+    th,td{border:1px solid #aaa;padding:5px;text-align:left;vertical-align:top}
+    th{background:#eee!important;color:#111!important;font-size:9px;text-transform:uppercase}
+    .money{text-align:right;white-space:nowrap}
+    .muted{color:#666;text-align:center}
+    .footer{margin-top:16px;border-top:1px solid #aaa;padding-top:6px;color:#555;font-size:9px}
+    @media print{html,body{background:#fff!important;color:#111!important}.loan-block{break-inside:avoid}}
+    @media(max-width:700px){.client-data,.grid{grid-template-columns:1fr}}
+  </style></head><body>
+    <h1>Historial completo de préstamos</h1>
+    <div class="client-data"><div><b>Cliente</b><span>${escapeHTML(cliente.nombre || '-')}</span></div><div><b>Documento</b><span>${escapeHTML(cliente.doc || '-')}</span></div><div><b>Teléfono</b><span>${escapeHTML(cliente.telefono || '-')}</span></div><div><b>Email</b><span>${escapeHTML(cliente.email || '-')}</span></div><div><b>Dirección</b><span>${escapeHTML(cliente.direccion || '-')}</span></div></div>
+    <div class="summary">Préstamos: ${prestamos.length} &nbsp; | &nbsp; Abonos registrados: ${totalAbonos}</div>
+    ${filasPrestamos || '<p>No hay préstamos registrados para este cliente.</p>'}
+    <div class="footer">Documento generado por Inverkev. Todos los valores corresponden al historial registrado en el sistema.</div>
+    <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script>
+  </body></html>`;
+  ventana.document.open();
+  ventana.document.write(html);
   ventana.document.close();
 }
 
