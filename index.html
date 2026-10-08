@@ -347,9 +347,10 @@
          <div class="form-group"><label>Monto *</label><input type="number" id="cli-monto" required min="1000" step="1000" placeholder="500000" oninput="calcularPreview()"></div>
          <div class="form-group"><label>Interés mensual % *</label><input type="number" id="cli-interes" required min="0" max="100" step="0.1" placeholder="5" oninput="calcularPreview()"></div></div>
        <div class="grid-2" style="gap:14px">
-         <div class="form-group"><label>Plazo (meses) *</label><select id="cli-plazo" required onchange="actualizarVencimientoPorMeses(); calcularPreview()"><option value="1">1 mes</option><option value="2">2 meses</option><option value="3">3 meses</option><option value="4">4 meses</option><option value="5">5 meses</option><option value="6">6 meses</option><option value="8">8 meses</option><option value="10">10 meses</option><option value="12">12 meses</option><option value="15">15 meses</option><option value="18">18 meses</option><option value="24">24 meses</option><option value="36">36 meses</option></select><small style="color:var(--text-muted);font-size:.75rem">Cuota: <span id="preview-cuota">-</span></small></div>
-         <div class="form-group"><label>Fecha Vencimiento *</label><input type="date" id="cli-vencimiento" required></div>
+         <div class="form-group"><label>Plazo (meses) *</label><select id="cli-plazo" required onchange="actualizarVencimientoPorMeses(); calcularPreview()"><option value="1">1 mes</option><option value="2">2 meses</option><option value="3">3 meses</option><option value="4">4 meses</option><option value="5">5 meses</option><option value="6">6 meses</option><option value="8">8 meses</option><option value="10">10 meses</option><option value="12">12 meses</option><option value="15">15 meses</option><option value="18">18 meses</option><option value="24">24 meses</option><option value="36">36 meses</option></select></div>
+         <div class="form-group"><label>Periodicidad de pago *</label><select id="cli-periodicidad" required onchange="calcularPreview()"><option value="mensual">Mensual (cada 30 días)</option><option value="quincenal">Quincenal (cada 15 días)</option></select><small style="color:var(--text-muted);font-size:.75rem">Cuota: <span id="preview-cuota">-</span></small></div>
        </div>
+       <div class="form-group"><label>Fecha Vencimiento *</label><input type="date" id="cli-vencimiento" required></div>
        <div id="preview-prestamo" class="chart-wrap" style="margin:14px 0;display:none"></div>
        <div id="alerta-mora" style="display:none;margin:12px 0;padding:12px;border-radius:10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:var(--danger);font-weight:600"></div>
        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">💥 Otorgar Préstamo</button>
@@ -380,7 +381,7 @@
    <form id="form-abono" onsubmit="registrarAbono(event)">
      <div class="form-group"><label>Préstamo Activo *</label><select id="select-prestamo-activo" required onchange="mostrarSaldoAbono()"></select></div>
      <div id="info-saldo-abono" class="chart-wrap" style="display:none;margin-bottom:14px"></div>
-     <div class="form-group"><label>Tipo de pago *</label><div style="display:flex;gap:10px;flex-wrap:wrap"><label class="modo-radio"><input type="radio" name="tipo-abono" value="cuota" checked onchange="cambiarTipoAbono()"> <span>Cuota del mes (<span id="label-cuota-mes">-</span>)</span></label><label class="modo-radio"><input type="radio" name="tipo-abono" value="diferente" onchange="cambiarTipoAbono()"> <span>Abono diferente</span></label></div></div>
+     <div class="form-group"><label>Tipo de pago *</label><div style="display:flex;gap:10px;flex-wrap:wrap"><label class="modo-radio"><input type="radio" name="tipo-abono" value="cuota" checked onchange="cambiarTipoAbono()"> <span>Cuota programada (<span id="label-cuota-mes">-</span>)</span></label><label class="modo-radio"><input type="radio" name="tipo-abono" value="diferente" onchange="cambiarTipoAbono()"> <span>Abono diferente</span></label></div></div>
      <div class="form-group"><label>Valor Abono *</label><input type="number" id="abono-valor" required min="1000" step="100" placeholder="Ej: 50000"></div>
      <div id="info-cuota-detalle" style="font-size:.85rem;color:var(--text-muted);background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.15);border-radius:8px;padding:8px 10px;display:none"></div>
      <button type="submit" class="btn btn-success" style="width:100%">💰 Registrar Abono a Cuota</button>
@@ -771,6 +772,7 @@ function migrarDatos() {
       if(!p.abonos) p.abonos = [];
       p.abonos.forEach(a => { if(!a.tipo) a.tipo = 'cuota'; });
       if(!p.plazoOriginal) p.plazoOriginal = p.plazoMeses;
+      if(!p.periodicidad) p.periodicidad = 'mensual';
     });
   });
 }
@@ -841,6 +843,15 @@ function guardarDB(){
 
 function formatoPeso(n){ return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number.isFinite(Number(n)) ? Number(n) : 0); }
 
+// ===== PERIODICIDAD DE PAGOS =====
+function obtenerPeriodicidad(p) { return p?.periodicidad === 'quincenal' ? 'quincenal' : 'mensual'; }
+function cuotasTotalesPrestamo(p) {
+  const meses = Math.max(1, Number(p?.plazoMeses || 1));
+  return Math.max(1, Math.round(meses * (obtenerPeriodicidad(p) === 'quincenal' ? 2 : 1)));
+}
+function etiquetaPeriodicidad(p) { return obtenerPeriodicidad(p) === 'quincenal' ? 'Quincenal (cada 15 días)' : 'Mensual (cada 30 días)'; }
+function textoCuota(p) { return obtenerPeriodicidad(p) === 'quincenal' ? ' / quincena' : ' / mes'; }
+
 // ===== CÁLCULO DE ESTADO DEL PRÉSTAMO =====
 function calcularEstadoPrestamo(p) {
   const abonos = p.abonos || [];
@@ -856,7 +867,9 @@ function calcularEstadoPrestamo(p) {
     abonos, totalAbonos, capitalAbonado, cuotaAbonado, montoOriginal,
     capitalActual, moraInfo, saldo, interesPactado,
     plazoActual: p.plazoMeses || 1,
-    cuotaActual: p.valorCuota || (p.totalPagar/(p.plazoMeses||1))
+    cuotasTotales: cuotasTotalesPrestamo(p),
+    periodicidad: obtenerPeriodicidad(p),
+    cuotaActual: p.valorCuota || (p.totalPagar/cuotasTotalesPrestamo(p))
   };
 }
 
@@ -1072,7 +1085,7 @@ function renderizarDashboard() {
         if (pagadoTotal) tr.className = 'row-pagado';
 
         let cuotasPagadas = Math.floor(est.totalAbonos / (est.cuotaActual || 1));
-        let totalCuotas = p.plazoMeses || 1;
+        let totalCuotas = est.cuotasTotales;
         if(cuotasPagadas > totalCuotas) cuotasPagadas = totalCuotas;
 
         let estadoBadge = pagadoTotal
@@ -1089,7 +1102,7 @@ function renderizarDashboard() {
           <td><strong>${escapeHTML(cliente.nombre)}</strong><br><small style="color:var(--text-muted)">Doc: ${escapeHTML(cliente.doc)}</small></td>
           <td><strong>${formatoPeso(montoOriginal)}</strong><br><small style="color:var(--text-muted)">Total: ${formatoPeso(p.totalPagar)}</small>${capitalTag}</td>
           <td>${escapeHTML(p.vencimiento || '-')}</td>
-          <td>${cuotasPagadas} / ${totalCuotas}</td>
+          <td>${cuotasPagadas} / ${totalCuotas}<br><small style="color:var(--text-muted)">${etiquetaPeriodicidad(p)}</small></td>
           <td><strong style="color:${est.saldo > 0 ? 'var(--secondary)' : 'var(--success)'}">${formatoPeso(est.saldo)}</strong></td>
           <td>${estadoBadge}</td>
           <td>
@@ -1153,13 +1166,15 @@ function calcularPreview(){
   let monto = parseFloat(document.getElementById('cli-monto').value) || 0;
   let interesMensual = parseFloat(document.getElementById('cli-interes').value) || 0;
   let plazo = parseInt(document.getElementById('cli-plazo').value) || 1;
+  let periodicidad = document.getElementById('cli-periodicidad')?.value || 'mensual';
+  let numeroCuotas = plazo * (periodicidad === 'quincenal' ? 2 : 1);
   let interesTotalPct = interesMensual * plazo;
   let interesMonto = monto * (interesTotalPct / 100);
   let totalPagar = monto + interesMonto;
-  let cuotaMensual = totalPagar / plazo;
+  let valorCuota = totalPagar / numeroCuotas;
 
   let spanCuota = document.getElementById('preview-cuota');
-  if(spanCuota) spanCuota.textContent = formatoPeso(cuotaMensual) + ' / mes';
+  if(spanCuota) spanCuota.textContent = formatoPeso(valorCuota) + (periodicidad === 'quincenal' ? ' / quincena' : ' / mes');
 
   let prevDiv = document.getElementById('preview-prestamo');
   if(prevDiv && monto > 0) {
@@ -1168,6 +1183,7 @@ function calcularPreview(){
       <div class="capital-info-grid">
         <div><small>Capital</small><strong>${formatoPeso(monto)}</strong></div>
         <div><small>Interés (${interesTotalPct.toFixed(1)}%)</small><strong style="color:var(--secondary)">+${formatoPeso(interesMonto)}</strong></div>
+        <div><small>${periodicidad === 'quincenal' ? 'Cuotas quincenales' : 'Cuotas mensuales'}</small><strong>${numeroCuotas}</strong></div>
         <div><small>Total</small><strong style="color:var(--success)">${formatoPeso(totalPagar)}</strong></div>
       </div>`;
   } else if(prevDiv) prevDiv.style.display = 'none';
@@ -1183,6 +1199,7 @@ function crearPrestamo(e){
   let monto = parseFloat(document.getElementById('cli-monto').value);
   let interesMensual = parseFloat(document.getElementById('cli-interes').value);
   let plazo = parseInt(document.getElementById('cli-plazo').value);
+  let periodicidad = document.getElementById('cli-periodicidad')?.value || 'mensual';
   let vencimiento = document.getElementById('cli-vencimiento').value;
 
   const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(vencimiento) && !Number.isNaN(new Date(`${vencimiento}T00:00:00`).getTime());
@@ -1201,7 +1218,8 @@ function crearPrestamo(e){
 
   let interesTotalPct = interesMensual * plazo;
   let totalPagar = monto + (monto * (interesTotalPct / 100));
-  let valorCuota = totalPagar / plazo;
+  let numeroCuotas = plazo * (periodicidad === 'quincenal' ? 2 : 1);
+  let valorCuota = totalPagar / numeroCuotas;
 
   let nuevoPrestamo = {
     id: 'L-' + Date.now().toString().slice(-6),
@@ -1212,6 +1230,8 @@ function crearPrestamo(e){
     interesTotalPct,
     plazoMeses: plazo,
     plazoOriginal: plazo,
+    periodicidad,
+    numeroCuotas,
     vencimiento,
     totalPagar,
     valorCuota,
@@ -1269,7 +1289,7 @@ function mostrarSaldoAbono(){
     let p = c.prestamos.find(x => x.id === id);
     if(p) {
       const est = calcularEstadoPrestamo(p);
-      if(labelCuota) labelCuota.textContent = formatoPeso(est.cuotaActual);
+      if(labelCuota) labelCuota.textContent = formatoPeso(est.cuotaActual) + textoCuota(p);
       if(tipo === 'cuota' && inputValor) inputValor.value = Math.round(est.cuotaActual);
 
       if(infoDiv) {
@@ -1278,6 +1298,7 @@ function mostrarSaldoAbono(){
           <div class="capital-info-grid">
             <div><small>Cliente</small><strong>${escapeHTML(c.nombre)}</strong></div>
             <div><small>Total Pagar</small><strong>${formatoPeso(p.totalPagar)}</strong></div>
+            <div><small>Periodicidad</small><strong>${etiquetaPeriodicidad(p)}</strong></div>
             <div><small>Saldo Actual</small><strong style="color:var(--secondary)">${formatoPeso(est.saldo)}</strong></div>
           </div>
           ${est.moraInfo.diasMora > 0 ? `<div style="margin-top:10px;color:var(--danger);font-size:0.85rem">⚠️ Incluye ${est.moraInfo.diasMora} días de mora (+${formatoPeso(est.moraInfo.interesMora)})</div>` : ''}
@@ -1444,14 +1465,17 @@ function previsualizarAbonoCapital() {
       const newCapital = est.capitalActual - valor;
       const newSaldo = est.saldo - valor;
       const plazoActual = est.plazoActual;
+      const cuotasActuales = est.cuotasTotales;
+      const factorPeriodicidad = obtenerPeriodicidad(p) === 'quincenal' ? 2 : 1;
       let nuevaCuota = est.cuotaActual;
       let nuevoPlazo = plazoActual;
 
       if(modo === 'reducir-cuota') {
-        nuevaCuota = newSaldo / plazoActual;
+        nuevaCuota = cuotasActuales > 0 ? newSaldo / cuotasActuales : 0;
       } else {
-        nuevoPlazo = Math.max(1, Math.ceil(newSaldo / est.cuotaActual));
-        nuevaCuota = newSaldo / nuevoPlazo;
+        const nuevasCuotas = est.cuotaActual > 0 ? Math.max(1, Math.ceil(newSaldo / est.cuotaActual)) : 1;
+        nuevoPlazo = Math.max(1, Math.ceil(nuevasCuotas / factorPeriodicidad));
+        nuevaCuota = newSaldo / (nuevoPlazo * factorPeriodicidad);
       }
 
       const ahorroCuota = est.cuotaActual - nuevaCuota;
@@ -1511,6 +1535,7 @@ function registrarAbonoCapital(e) {
   const saldoViejo = est.saldo;
   const capitalViejo = est.capitalActual;
   const totalAbonosAntes = est.totalAbonos;
+  const factorPeriodicidad = obtenerPeriodicidad(prestamo) === 'quincenal' ? 2 : 1;
 
   const newCapital = capitalViejo - valor;
   const newSaldo = saldoViejo - valor;
@@ -1518,10 +1543,11 @@ function registrarAbonoCapital(e) {
   let nuevoPlazo = plazoViejo;
 
   if(modo === 'reducir-cuota') {
-    nuevaCuota = plazoViejo > 0 ? newSaldo / plazoViejo : 0;
+    nuevaCuota = est.cuotasTotales > 0 ? newSaldo / est.cuotasTotales : 0;
   } else {
-    nuevoPlazo = cuotaVieja > 0 ? Math.max(1, Math.ceil(newSaldo / cuotaVieja)) : 1;
-    nuevaCuota = nuevoPlazo > 0 ? newSaldo / nuevoPlazo : 0;
+    const nuevasCuotas = cuotaVieja > 0 ? Math.max(1, Math.ceil(newSaldo / cuotaVieja)) : 1;
+    nuevoPlazo = Math.max(1, Math.ceil(nuevasCuotas / factorPeriodicidad));
+    nuevaCuota = nuevoPlazo > 0 ? newSaldo / (nuevoPlazo * factorPeriodicidad) : 0;
   }
 
   if(newSaldo <= 0) {
@@ -1716,7 +1742,7 @@ function renderizarHistorial() {
             <div><strong>Saldo:</strong> <span style="color:${pagadoTotal?'var(--success)':'var(--secondary)'}">${formatoPeso(est.saldo)}</span></div>
           </div>
           <div style="margin-top:6px;font-size:0.85rem;color:var(--text-muted)">
-            Vencimiento: ${escapeHTML(p.vencimiento)} | Plazo: ${est.plazoActual} meses | Cuota: ${formatoPeso(est.cuotaActual)}
+            Vencimiento: ${escapeHTML(p.vencimiento)} | Plazo: ${est.plazoActual} meses | ${etiquetaPeriodicidad(p)} | Cuota: ${formatoPeso(est.cuotaActual)}${textoCuota(p)}
             ${est.capitalAbonado>0?` | <span style="color:var(--accent)">🏦 Cap. abonado: ${formatoPeso(est.capitalAbonado)}</span>`:''}
           </div>
           <div style="margin-top:8px"><strong>Abonos (${p.abonos.length}):</strong></div>
@@ -1765,7 +1791,9 @@ function imprimirHistorialCliente(doc) {
         <div><b>Interés total pactado</b><span>${Number(p.interesTotalPct || 0).toFixed(2)}%</span></div>
         <div><b>Plazo original</b><span>${escapeHTML(p.plazoOriginal || p.plazoMeses || '-')} meses</span></div>
         <div><b>Plazo actual</b><span>${escapeHTML(est.plazoActual || '-')} meses</span></div>
-        <div><b>Cuota actual</b><span>${formatoPeso(est.cuotaActual)}</span></div>
+        <div><b>Periodicidad</b><span>${etiquetaPeriodicidad(p)}</span></div>
+        <div><b>Cuotas</b><span>${est.cuotasTotales}</span></div>
+        <div><b>Cuota actual</b><span>${formatoPeso(est.cuotaActual)}${textoCuota(p)}</span></div>
         <div><b>Total pactado</b><span>${formatoPeso(p.totalPagar)}</span></div>
         <div><b>Total abonado</b><span>${formatoPeso(est.totalAbonos)}</span></div>
         <div><b>Capital abonado</b><span>${formatoPeso(est.capitalAbonado)}</span></div>
