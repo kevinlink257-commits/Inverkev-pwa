@@ -231,10 +231,10 @@
    <div class="login-logo">
      <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="10" fill="currentColor"/><path d="M50 20 L50 35 M50 65 L50 80 M20 50 L35 50 M65 50 L80 50" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
      <h2>Inverkev</h2>
-     <p>Acceso seguro • Sistema de Crédito<br><small id="auth-subtitle" style="opacity:.7">Ingresa con tu usuario y contraseña</small></p>
+     <p>Acceso seguro • Sistema de Crédito<br><small id="auth-subtitle" style="opacity:.7">Ingresa con tu correo y contraseña</small></p>
    </div>
    <div class="auth-mode"><button type="button" id="auth-login-tab" class="active" onclick="cambiarModoAuth('login')">Iniciar sesión</button><button type="button" id="auth-register-tab" onclick="cambiarModoAuth('register')">Crear cuenta</button></div>
-   <div class="login-field"><input type="text" id="login-user" class="auth-user" placeholder="Usuario" autocomplete="username" onkeydown="if(event.key==='Enter') intentarLogin()"></div>
+   <div class="login-field"><input type="email" id="login-user" class="auth-user" placeholder="Correo electrónico" autocomplete="email" onkeydown="if(event.key==='Enter') intentarLogin()"></div>
    <div class="login-field">
      <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter') intentarLogin()">
      <button class="toggle-eye" onclick="togglePass()" type="button" title="Ver contraseña">👁️</button>
@@ -243,7 +243,7 @@
    <button class="btn btn-primary" style="width:100%;padding:14px" onclick="intentarLogin()" id="btn-login">🔐 Ingresar</button>
    <div class="login-error" id="login-error"></div>
    <div class="login-account" id="active-account-label"></div>
-   <div class="login-hint">🔒 Las contraseñas se almacenan como hash SHA-256 en este dispositivo.<br><br>💡 Cada usuario tiene sus propios clientes, préstamos, notas y configuración.</div>
+   <div class="login-hint">🔒 Supabase Auth protege tu cuenta y permite acceder desde varios dispositivos.<br><br>💡 Cada correo tiene sus propios clientes, préstamos, notas y configuración.</div>
  </div>
 </div>
 
@@ -749,8 +749,6 @@ let calcBuffer = '';
 let supabaseDisponible = true;
 let supabaseAvisado = false;
 let currentUser = null;
-const ACCOUNTS_KEY = 'inverkev_accounts_v1';
-const SESSION_USER_KEY = 'inverkev_current_user';
 
 function actualizarIndicadorSincronizacion(estado, detalle='') {
   const indicador = document.getElementById('sync-status');
@@ -803,67 +801,69 @@ function migrarDatos() {
   });
 }
 
-function obtenerCuentas() {
-  try { const cuentas = JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '[]'); return Array.isArray(cuentas) ? cuentas : []; }
-  catch(err) { return []; }
+function localBackupKey() {
+  return currentUser?.id ? `inverkev_backup_${currentUser.id}` : null;
 }
-function guardarCuentas(cuentas) { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(cuentas)); }
-function claveUsuario(nombre) { return String(nombre || '').trim().toLowerCase(); }
-function crearIdUsuario() { return 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2,10); }
-function localDbKey() { return currentUser?.key === 'admin' ? 'inverkev_db_v3' : `inverkev_db_v3_${currentUser?.storageId || 'guest'}`; }
-function cloudDbKey() { return currentUser?.key === 'admin' ? 'main_state' : `user_${currentUser?.storageId || 'guest'}`; }
-function leerDBLocal() {
-  try { return crearDBSegura(JSON.parse(localStorage.getItem(localDbKey()) || 'null')); }
-  catch(err) { console.warn('Datos locales corruptos; se restauran valores iniciales.', err); return crearDBSegura(null); }
-}
-function prepararCuentaLegacy() {
-  const cuentas = obtenerCuentas();
-  if(!cuentas.some(c => c.key === 'admin')) {
-    cuentas.unshift({key:'admin', username:'admin', passwordHash:DEFAULT_PASS_HASH, storageId:'admin', createdAt:new Date().toISOString()});
-    guardarCuentas(cuentas);
-  }
-}
-async function cargarDatosSupabase() {
-  actualizarIndicadorSincronizacion('checking', 'Comprobando conexión y datos de '+(currentUser?.username || 'usuario'));
-  db = leerDBLocal();
-  supabaseDisponible = true; supabaseAvisado = false;
+function leerBackupLocal() {
   try {
-    const { data, error } = await supabaseClient.from('inverkev_data').select('*').eq('id', cloudDbKey()).limit(1);
-    if(error) {
-      supabaseDisponible = false;
-      actualizarIndicadorSincronizacion('local', 'Supabase no está disponible; los cambios se guardan en este dispositivo');
-      if(!supabaseAvisado) { console.warn('Supabase no disponible; se usa almacenamiento local.', error.message || error); supabaseAvisado = true; }
-    } else if(data && data.length > 0 && data[0].payload) {
-      db = crearDBSegura(data[0].payload);
-      localStorage.setItem(localDbKey(), JSON.stringify(db));
-      actualizarIndicadorSincronizacion('saved', 'Datos cargados desde Supabase para '+currentUser.username);
-    } else {
-      await guardarDBSupabase();
-    }
+    const key = localBackupKey();
+    return key ? crearDBSegura(JSON.parse(localStorage.getItem(key) || 'null')) : crearDBSegura(null);
   } catch(err) {
-    supabaseDisponible = false;
-    actualizarIndicadorSincronizacion('local', 'Supabase no está disponible; los cambios se guardan en este dispositivo');
-    if(!supabaseAvisado) { console.warn('Supabase no disponible; se usa almacenamiento local.', err); supabaseAvisado = true; }
+    console.warn('Respaldo local corrupto; se restauran valores iniciales.', err);
+    return crearDBSegura(null);
   }
+}
+function guardarBackupLocal() {
+  const key = localBackupKey();
+  if(key) localStorage.setItem(key, JSON.stringify(db));
+}
+function pintarDatosAplicacion() {
   db = crearDBSegura(db);
   if(!db.config.presupuesto) db.config.presupuesto = 10000000;
   migrarDatos(); idiomaActual = db.config.idioma || 'es';
   renderizarDashboard(); renderizarHistorial(); actualizarSelectPrestamos(); actualizarSelectCapital(); renderizarNotas(); renderizarGraficos(); renderUltimosClientes(); initModuloAdicional();
 }
-async function guardarDBSupabase() {
-  localStorage.setItem(localDbKey(), JSON.stringify(db));
-  if(!supabaseDisponible || !currentUser) { actualizarIndicadorSincronizacion('local', 'Cambio guardado en este dispositivo'); return; }
-  actualizarIndicadorSincronizacion('syncing', 'Guardando datos de '+currentUser.username+' en la nube');
+async function cargarDatosSupabaseAuth() {
+  if(!currentUser) { mostrarPantallaLogin(); return; }
+  actualizarIndicadorSincronizacion('checking', `Cargando datos de ${currentUser.email}`);
   try {
-    const { error } = await supabaseClient.from('inverkev_data').upsert({ id: cloudDbKey(), payload: db, updated_at: new Date() });
+    const { data, error } = await supabaseClient.from('user_data').select('payload').eq('user_id', currentUser.id).maybeSingle();
     if(error) throw error;
-    actualizarIndicadorSincronizacion('saved', 'Datos guardados en la nube para '+currentUser.username);
+    if(data?.payload) {
+      db = crearDBSegura(data.payload);
+      guardarBackupLocal();
+    } else {
+      db = leerBackupLocal();
+      const { error: insertError } = await supabaseClient.from('user_data').insert({ user_id: currentUser.id, payload: db });
+      if(insertError) throw insertError;
+    }
+    supabaseDisponible = true; supabaseAvisado = false;
+    pintarDatosAplicacion();
+    datosCargadosUserId = currentUser.id;
+    actualizarIndicadorSincronizacion('saved', `Datos cargados desde Supabase para ${currentUser.email}`);
   } catch(err) {
-    supabaseDisponible = false; actualizarIndicadorSincronizacion('error', 'No se pudo sincronizar; el cambio queda en localStorage');
-    if(!supabaseAvisado) { console.warn('Supabase no disponible; se guardan localmente.', err.message || err); supabaseAvisado = true; }
+    supabaseDisponible = false;
+    db = leerBackupLocal(); pintarDatosAplicacion();
+    actualizarIndicadorSincronizacion('error', `Supabase: ${err.message || 'no se pudieron cargar los datos'}`);
+    console.error('Error cargando datos de Supabase:', err);
   }
 }
-function guardarDB(){ guardarDBSupabase(); renderizarDashboard(); renderizarHistorial(); actualizarSelectPrestamos(); actualizarSelectCapital(); renderizarNotas(); renderizarGraficos(); renderUltimosClientes(); }
+async function guardarDBSupabaseAuth() {
+  guardarBackupLocal();
+  if(!currentUser) { actualizarIndicadorSincronizacion('local', 'No hay una sesión de Supabase activa'); return; }
+  actualizarIndicadorSincronizacion('syncing', `Guardando datos de ${currentUser.email}`);
+  try {
+    const { error } = await supabaseClient.from('user_data').upsert({ user_id: currentUser.id, payload: db }, { onConflict: 'user_id' });
+    if(error) throw error;
+    supabaseDisponible = true;
+    actualizarIndicadorSincronizacion('saved', `Datos guardados en la nube para ${currentUser.email}`);
+  } catch(err) {
+    supabaseDisponible = false;
+    actualizarIndicadorSincronizacion('error', `No se pudo sincronizar: ${err.message || 'error desconocido'}`);
+    console.error('Error guardando datos en Supabase:', err);
+  }
+}
+function guardarDB(){ guardarDBSupabaseAuth(); renderizarDashboard(); renderizarHistorial(); actualizarSelectPrestamos(); actualizarSelectCapital(); renderizarNotas(); renderizarGraficos(); renderUltimosClientes(); }
 
 function formatoPeso(n){ return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number.isFinite(Number(n)) ? Number(n) : 0); }
 
@@ -1005,43 +1005,81 @@ function instalarPWA(){
   }
 }
 
-// ===== LOGIN MULTIUSUARIO =====
-const DEFAULT_PASS_HASH = 'e112e1fe6cd0789436873c6938e7d3af87d94c71291e5a93205363dea3deb751';
+// ===== SUPABASE AUTH =====
 let authMode = 'login';
-async function hashString(str){ const data=new TextEncoder().encode(str); const hashBuffer=await crypto.subtle.digest('SHA-256',data); return Array.from(new Uint8Array(hashBuffer)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+let datosCargadosUserId = null;
+let authListenerRegistrado = false;
+function mostrarErrorLogin(mensaje, esError=true) {
+  const err=document.getElementById('login-error'); if(!err) return;
+  err.textContent=mensaje; err.classList.add('show'); err.style.color=esError?'#fca5a5':'#6ee7b7';
+}
+function ocultarErrorLogin(){ const err=document.getElementById('login-error'); if(err){err.textContent='';err.classList.remove('show');} }
+function mostrarPantallaLogin(){
+  currentUser=null; datosCargadosUserId=null;
+  document.getElementById('login-overlay')?.classList.remove('hidden');
+  const pass=document.getElementById('login-pass'); if(pass) pass.value='';
+  ocultarErrorLogin(); actualizarIndicadorSincronizacion('local','Inicia sesión para sincronizar con Supabase');
+}
 function cambiarModoAuth(mode){
   authMode=mode;
   document.getElementById('auth-login-tab')?.classList.toggle('active',mode==='login'); document.getElementById('auth-register-tab')?.classList.toggle('active',mode==='register');
   const confirm=document.getElementById('confirm-pass-field'); if(confirm) confirm.style.display=mode==='register'?'block':'none';
   const btn=document.getElementById('btn-login'); if(btn) btn.textContent=mode==='register'?'📝 Crear cuenta':'🔐 Ingresar';
-  const sub=document.getElementById('auth-subtitle'); if(sub) sub.textContent=mode==='register'?'Crea un usuario independiente':'Ingresa con tu usuario y contraseña';
-  const err=document.getElementById('login-error'); if(err) err.classList.remove('show');
+  const sub=document.getElementById('auth-subtitle'); if(sub) sub.textContent=mode==='register'?'Crea tu cuenta segura con correo':'Ingresa con tu correo y contraseña';
+  const user=document.getElementById('login-user'); if(user){ user.type='email'; user.placeholder='Correo electrónico'; user.autocomplete='email'; }
+  ocultarErrorLogin();
+}
+async function registrarUsuarioSupabase(){
+  const email=(document.getElementById('login-user')?.value||'').trim().toLowerCase(), password=document.getElementById('login-pass')?.value||'', confirm=document.getElementById('login-pass-confirm')?.value||'';
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Escribe un correo electrónico válido.');
+  if(password.length<6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
+  if(password!==confirm) throw new Error('Las contraseñas no coinciden.');
+  const { data, error }=await supabaseClient.auth.signUp({ email, password, options:{ emailRedirectTo: window.location.origin + window.location.pathname } });
+  if(error) throw error;
+  if(!data.session){ mostrarErrorLogin('Cuenta creada. Revisa tu correo y confirma la cuenta antes de iniciar sesión.',false); return; }
+  await procesarSesionSupabase(data.session);
+  notificar('Cuenta creada correctamente','success');
+}
+async function iniciarSesionSupabase(){
+  const email=(document.getElementById('login-user')?.value||'').trim().toLowerCase(), password=document.getElementById('login-pass')?.value||'';
+  if(!email || !password) throw new Error('Escribe tu correo y contraseña.');
+  const { data, error }=await supabaseClient.auth.signInWithPassword({ email, password });
+  if(error) throw new Error('Correo o contraseña incorrectos.');
+  await procesarSesionSupabase(data.session);
+  notificar(`Bienvenido, ${email}`,'success');
 }
 async function intentarLogin(){
-  const userEl=document.getElementById('login-user'), passEl=document.getElementById('login-pass'), confirmEl=document.getElementById('login-pass-confirm'), err=document.getElementById('login-error');
-  const username=(userEl?.value||'').trim(), password=passEl?.value||'';
-  const fail=msg=>{err.textContent=msg;err.classList.add('show');playSound('error');};
-  if(!/^[a-zA-Z0-9._-]{3,32}$/.test(username)) return fail('Usa un usuario de 3 a 32 caracteres: letras, números, punto, guion o guion bajo.');
-  if(password.length<6) return fail('La contraseña debe tener al menos 6 caracteres.');
-  const key=claveUsuario(username), cuentas=obtenerCuentas(), hash=await hashString(password);
-  if(authMode==='register'){
-    if(password!==((confirmEl?.value)||'')) return fail('Las contraseñas no coinciden.');
-    if(cuentas.some(c=>c.key===key)) return fail('Ese usuario ya está registrado.');
-    const cuenta={key,username,passwordHash:hash,storageId:crearIdUsuario(),createdAt:new Date().toISOString()}; cuentas.push(cuenta); guardarCuentas(cuentas); await iniciarSesion(cuenta); notificar('Cuenta creada correctamente','success'); return;
-  }
-  let cuenta=cuentas.find(c=>c.key===key);
-  if(!cuenta && key==='admin' && hash===DEFAULT_PASS_HASH){ prepararCuentaLegacy(); cuenta=obtenerCuentas().find(c=>c.key==='admin'); }
-  if(!cuenta || hash!==cuenta.passwordHash) return fail('Usuario o contraseña incorrectos.');
-  await iniciarSesion(cuenta); notificar('Bienvenido, '+cuenta.username,'success');
+  const btn=document.getElementById('btn-login'); ocultarErrorLogin();
+  if(btn){btn.disabled=true;btn.textContent=authMode==='register'?'Creando cuenta...':'Ingresando...';}
+  try { if(authMode==='register') await registrarUsuarioSupabase(); else await iniciarSesionSupabase(); }
+  catch(err){ console.error('Error de autenticación:',err); mostrarErrorLogin(err.message||'No fue posible completar la operación.'); playSound('error'); }
+  finally { if(btn){btn.disabled=false;btn.textContent=authMode==='register'?'📝 Crear cuenta':'🔐 Ingresar';} }
 }
-async function iniciarSesion(cuenta){
-  currentUser=cuenta; sessionStorage.setItem(SESSION_USER_KEY,cuenta.key); sessionStorage.setItem('inverkev_logged_in','true');
-  document.getElementById('login-overlay').classList.add('hidden'); document.getElementById('login-pass').value=''; document.getElementById('login-pass-confirm').value=''; document.getElementById('login-error').classList.remove('show');
-  const label=document.getElementById('active-account-label'); if(label) label.textContent='Sesión activa: '+cuenta.username;
-  cambiarModoAuth('login'); await cargarDatosSupabase();
+async function procesarSesionSupabase(session){
+  if(!session?.user){ mostrarPantallaLogin(); return; }
+  currentUser=session.user;
+  document.getElementById('login-overlay')?.classList.add('hidden');
+  const label=document.getElementById('active-account-label'); if(label) label.textContent=`Sesión activa: ${currentUser.email}`;
+  document.getElementById('login-pass').value=''; document.getElementById('login-pass-confirm').value=''; ocultarErrorLogin();
+  cambiarModoAuth('login');
+  if(datosCargadosUserId!==currentUser.id) await cargarDatosSupabaseAuth();
+}
+async function iniciarAplicacionSupabase(){
+  const { data:{ session } }=await supabaseClient.auth.getSession();
+  if(session?.user) await procesarSesionSupabase(session); else mostrarPantallaLogin();
+  if(!authListenerRegistrado){
+    authListenerRegistrado=true;
+    supabaseClient.auth.onAuthStateChange((event, nextSession)=>{
+      setTimeout(()=>{ if(nextSession?.user) procesarSesionSupabase(nextSession); else mostrarPantallaLogin(); },0);
+    });
+  }
+}
+async function cerrarSesion(){
+  const { error }=await supabaseClient.auth.signOut({ scope:'local' });
+  if(error){ console.error('Error cerrando sesión:',error); mostrarErrorLogin('No se pudo cerrar la sesión.'); return; }
+  mostrarPantallaLogin(); notificar('Sesión cerrada','success');
 }
 function togglePass(){ const inp=document.getElementById('login-pass'); if(inp) inp.type=inp.type==='password'?'text':'password'; }
-function cerrarSesion(){ currentUser=null; sessionStorage.removeItem(SESSION_USER_KEY); sessionStorage.removeItem('inverkev_logged_in'); document.getElementById('login-overlay').classList.remove('hidden'); document.getElementById('login-pass').value=''; document.getElementById('login-user').value=''; cambiarModoAuth('login'); notificar('Sesión cerrada','success'); }
 function toggleHeaderTools(){ const header=document.querySelector('header'),btn=document.getElementById('headerCollapseBtn'); if(!header||!btn)return; const collapsed=header.classList.toggle('header-collapsed'); btn.setAttribute('aria-expanded',String(!collapsed)); btn.textContent=collapsed?'⌄':'⌃'; }
 
 // ===== PRESUPUESTO =====
@@ -2545,9 +2583,7 @@ function initModuloAdicional(){
 // ===== INICIALIZACIÓN =====
 window.onload = async function(){
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(err => console.warn('Service worker no disponible:', err));
-  prepararCuentaLegacy();
-  const sessionKey=sessionStorage.getItem(SESSION_USER_KEY), cuenta=obtenerCuentas().find(c=>c.key===sessionKey);
-  if(cuenta) await iniciarSesion(cuenta);
+  await iniciarAplicacionSupabase();
   actualizarVencimientoPorMeses();
 };
 </script>
