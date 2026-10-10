@@ -11,10 +11,14 @@ Sistema Avanzado de Crédito y Cobranza - PWA instalable con login seguro.
 - Calculadoras, notas, gráficos y scoring de crédito
 - Generación de documentos legales informativos
 - Persistencia local y sincronización opcional con Supabase
+- Registro de varios usuarios con datos independientes por cuenta
 - PWA instalable y offline
 
-## 🔐 Login
-La aplicación valida la contraseña mediante SHA-256; este README no publica ninguna contraseña en texto plano.
+## 🔐 Usuarios y login
+
+La aplicación permite **crear varias cuentas** desde la pestaña `Crear cuenta` del acceso. Cada usuario tiene separados sus clientes, préstamos, abonos, notas, scoring, presupuesto y configuración.
+
+La contraseña se valida mediante SHA-256 y no se guarda en texto plano.
 
 Para cambiar la clave:
 1. Genera el hash SHA-256 de una nueva contraseña.
@@ -22,6 +26,8 @@ Para cambiar la clave:
 3. Elimina la contraseña guardada en `sessionStorage` del navegador y vuelve a iniciar sesión.
 
 > La autenticación en una aplicación estática con el hash en el cliente protege la interfaz, pero no sustituye una autenticación de servidor para información sensible o multiusuario.
+
+Los datos locales se guardan con una clave propia por usuario. Cuando Supabase está habilitado, cada cuenta usa un registro independiente en `inverkev_data` (`main_state` conserva la cuenta histórica `admin`; las cuentas nuevas usan un identificador `user_*`). Para seguridad multi-dispositivo y control de acceso real, se recomienda migrar las cuentas a **Supabase Auth** y habilitar políticas RLS; el registro incluido en esta PWA es un sistema de cuentas local del navegador.
 
 ## Archivos
 - `index.html`: aplicación principal
