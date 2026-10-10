@@ -2,36 +2,45 @@
 
 Sistema Avanzado de Crédito y Cobranza - PWA instalable con login seguro.
 
-## 🚀 Características
-- Dashboard con estadísticas reales
-- Cálculo automático de mora con tasa usura
-- Calculadora general + calculadora de préstamos
-- Notas, gráficos con Chart.js
-- Misión y Visión
-- Menú desplegable con configuración: estilo, colores, idioma
-- Login protegido con SHA-256 (sin clave en texto plano)
+## Características
+- Dashboard con estadísticas de cartera
+- Cálculo automático de mora
+- Préstamos mensuales o quincenales (cada 15 días)
+- Abonos a cuota y abonos a capital
+- Historial por cliente e impresión de recibos
+- Calculadoras, notas, gráficos y scoring de crédito
+- Generación de documentos legales informativos
+- Persistencia local y sincronización opcional con Supabase
 - PWA instalable y offline
 
 ## 🔐 Login
-La clave no está en el código, solo su hash SHA-256.
-Clave actual: Inverkev$2026! (cámbiala generando un nuevo hash antes de publicar el proyecto)
+La aplicación valida la contraseña mediante SHA-256; este README no publica ninguna contraseña en texto plano.
 
-## 📦 Archivos
-- index.html - App principal
-- manifest.json - Config PWA
-- sw.js - Service Worker
-- icon-192.png / icon-512.png / icon-180.png - Iconos
+Para cambiar la clave:
+1. Genera el hash SHA-256 de una nueva contraseña.
+2. Reemplaza únicamente el valor de `DEFAULT_PASS_HASH` en `index.html`.
+3. Elimina la contraseña guardada en `sessionStorage` del navegador y vuelve a iniciar sesión.
 
-## 🌐 Deploy en Vercel
+> La autenticación en una aplicación estática con el hash en el cliente protege la interfaz, pero no sustituye una autenticación de servidor para información sensible o multiusuario.
+
+## Archivos
+- `index.html`: aplicación principal
+- `manifest.json`: configuración PWA
+- `sw.js`: service worker y caché offline
+- `icon-192.png`, `icon-512.png`, `icon-180.png`: iconos
+
+## Despliegue en Vercel
 Conecta este repositorio en Vercel como sitio estático:
-- Build command: (vacío)
-- Output directory: /
+- Build command: vacío
+- Output directory: `/`
+- Framework preset: Other / sitio estático
 
-> Seguridad: la clave inicial aparece documentada únicamente para la configuración original. Cámbiala antes de usar la aplicación en producción y no publiques credenciales en el repositorio.
+Vercel desplegará automáticamente los commits enviados a la rama principal si el proyecto está conectado al repositorio.
 
-## 🔄 Cambiar clave
-1. Genera SHA-256 de tu nueva clave en https://emn178.github.io/online-tools/sha256.html
-2. Reemplaza HASH_AUTORIZADO en index.html línea ~40
-3. Haz commit y push, Netlify despliega solo.
+> No publiques contraseñas, claves privadas ni credenciales de Supabase en el repositorio.
+
+## Nota legal
+
+Los documentos legales generados son modelos informativos y deben ser revisados por un abogado antes de utilizarse.
 
 Desarrollado por Kevin Obeso - Inverkev

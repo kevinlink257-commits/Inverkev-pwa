@@ -577,10 +577,13 @@
        <div class="form-group"><label>Email</label><input type="email" id="legal-email"></div>
        <div class="form-group"><label>Vencimiento</label><input type="date" id="legal-vencimiento"></div>
      </div>
-     <div class="grid-3" style="gap:10px">
+     <div class="grid-2" style="gap:10px">
        <div class="form-group"><label>Monto (capital)</label><input type="number" id="legal-monto" step="1000"></div>
        <div class="form-group"><label>Interés % mensual</label><input type="number" id="legal-interes" step="0.1" value="2.2"></div>
+     </div>
+     <div class="grid-2" style="gap:10px">
        <div class="form-group"><label>Plazo (meses)</label><input type="number" id="legal-plazo" min="1" value="2"></div>
+       <div class="form-group"><label>Periodicidad de pago</label><select id="legal-periodicidad"><option value="mensual">Mensual (cada 30 días)</option><option value="quincenal">Quincenal (cada 15 días)</option></select></div>
      </div>
 
      <div class="action-btns" style="margin-top:8px">
@@ -1107,11 +1110,11 @@ function renderizarDashboard() {
           <td>${estadoBadge}</td>
           <td>
             <div class="action-btns">
-              ${!pagadoTotal ? `<button class="btn btn-sm btn-success" onclick="seleccionarYIrAbono('${p.id}')">💰</button>` : ''}
-              ${!pagadoTotal ? `<button class="btn btn-sm btn-primary" onclick="seleccionarYIrCapital('${p.id}')" title="Abono a capital">🏦</button>` : ''}
-              <button class="btn btn-sm btn-ghost" onclick="reimprimirUltimoTicket('${p.id}')" title="Imprimir último recibo">🧾</button>
+              ${!pagadoTotal ? `<button class="btn btn-sm btn-success" onclick="seleccionarYIrAbono(decodeURIComponent('${encodeURIComponent(p.id)}'))">💰</button>` : ''}
+              ${!pagadoTotal ? `<button class="btn btn-sm btn-primary" onclick="seleccionarYIrCapital(decodeURIComponent('${encodeURIComponent(p.id)}'))" title="Abono a capital">🏦</button>` : ''}
+              <button class="btn btn-sm btn-ghost" onclick="reimprimirUltimoTicket(decodeURIComponent('${encodeURIComponent(p.id)}'))" title="Imprimir último recibo">🧾</button>
               <button class="btn btn-sm btn-ghost" onclick="imprimirHistorialCliente(decodeURIComponent('${encodeURIComponent(cliente.doc)}'))" title="Imprimir historial completo">🖨️</button>
-              <button class="btn btn-sm btn-danger" onclick="eliminarPrestamo('${cliente.doc}', '${p.id}')">🗑️</button>
+              <button class="btn btn-sm btn-danger" onclick="eliminarPrestamo(decodeURIComponent('${encodeURIComponent(cliente.doc)}'), decodeURIComponent('${encodeURIComponent(p.id)}'))">🗑️</button>
             </div>
           </td>
         `;
@@ -1758,7 +1761,7 @@ function renderizarHistorial() {
         </div>
         <div class="action-btns">
           <button class="btn btn-sm btn-ghost" onclick="imprimirHistorialCliente(decodeURIComponent('${encodeURIComponent(c.doc)}'))">🖨️ Imprimir historial</button>
-          <button class="btn btn-sm btn-danger" onclick="eliminarClienteCompleto('${c.doc}')">🗑️ Eliminar Cliente</button>
+          <button class="btn btn-sm btn-danger" onclick="eliminarClienteCompleto(decodeURIComponent('${encodeURIComponent(c.doc)}'))">🗑️ Eliminar Cliente</button>
         </div>
       </div>
       ${prestamosHtml}`;
@@ -1846,6 +1849,7 @@ function imprimirHistorialCliente(doc) {
 }
 
 function eliminarPrestamo(doc, prestamoId) {
+  doc = String(doc); prestamoId = String(prestamoId);
   if(!confirm('¿Estás seguro de eliminar este préstamo?')) return;
   for(let c of db.clientes) {
     if(c.doc === doc) {
@@ -1858,6 +1862,7 @@ function eliminarPrestamo(doc, prestamoId) {
   }
 }
 function eliminarClienteCompleto(doc) {
+  doc = String(doc);
   if(!confirm('¿Eliminar este cliente y todo su historial?')) return;
   db.clientes = db.clientes.filter(c => c.doc !== doc);
   guardarDB(); notificar('Cliente eliminado', 'success');
@@ -2311,6 +2316,7 @@ function cargarDatosLegales(){
       document.getElementById('legal-monto').value = p.montoOriginal || p.monto;
       document.getElementById('legal-interes').value = p.interesMensual || 2.2;
       document.getElementById('legal-plazo').value = p.plazoMeses || 2;
+      document.getElementById('legal-periodicidad').value = obtenerPeriodicidad(p);
       document.getElementById('legal-vencimiento').value = p.vencimiento || '';
       return;
     }
@@ -2332,6 +2338,7 @@ function obtenerDatosLegales(){
     monto: parseFloat(document.getElementById('legal-monto').value) || 0,
     interes: parseFloat(document.getElementById('legal-interes').value) || 2.2,
     plazo: parseInt(document.getElementById('legal-plazo').value) || 2,
+    periodicidad: document.getElementById('legal-periodicidad').value || 'mensual',
     vencimiento: document.getElementById('legal-vencimiento').value,
     mutuante: document.getElementById('legal-mutuante').value.trim() || '[TU NOMBRE COMPLETO]',
     mutuanteCC: document.getElementById('legal-mutuante-cc').value.trim() || '[XXXX]',
@@ -2352,8 +2359,10 @@ function imprimirLegal(){ setTimeout(()=>window.print(), 200); }
 function generarContrato(){
   const d = obtenerDatosLegales(); if(!d) return;
   const totalPagar = d.monto + (d.monto * d.interes * d.plazo / 100);
-  const cuotas = d.plazo * 2;
+  const factorPeriodicidad = d.periodicidad === 'quincenal' ? 2 : 1;
+  const cuotas = d.plazo * factorPeriodicidad;
   const valorCuota = totalPagar / cuotas;
+  const periodoTexto = d.periodicidad === 'quincenal' ? 'cuotas quincenales (cada 15 días)' : 'cuotas mensuales (cada 30 días)';
   const ea = ((Math.pow(1 + d.interes/100, 12) - 1) * 100).toFixed(2);
   const html = `
     <h1>Contrato de Mutuo con Interés (Recursos Propios)</h1>
@@ -2361,7 +2370,7 @@ function generarContrato(){
     <p><strong>CLÁUSULAS:</strong></p>
     <p><strong>PRIMERA — OBJETO:</strong> El Mutuante entrega en calidad de mutuo o préstamo de consumo la suma de ${formatoPeso(d.monto)} (${numeroALetras(d.monto)}).</p>
     <p><strong>SEGUNDA — INTERÉS:</strong> Interés remuneratorio del ${d.interes.toFixed(2)}% mensual, equivalente a ${ea}% E.A. aprox, siempre por debajo de la tasa de usura certificada por la Superintendencia Financiera de Colombia vigente al momento del desembolso. Interés moratorio: máximo legal permitido (usura).</p>
-    <p><strong>TERCERA — PLAZO Y FORMA DE PAGO:</strong> Plazo de ${d.plazo*30} días, pagaderos en ${cuotas} cuotas quincenales de ${formatoPeso(valorCuota)} cada una, mediante transferencia a Nequi/Bancolombia ${escapeHTML(d.nequi)} a nombre del Mutuante. Tabla de amortización anexa hace parte integral.</p>
+    <p><strong>TERCERA — PLAZO Y FORMA DE PAGO:</strong> Plazo de ${d.plazo*30} días, pagaderos en ${cuotas} ${periodoTexto} de ${formatoPeso(valorCuota)} cada una, mediante transferencia a Nequi/Bancolombia ${escapeHTML(d.nequi)} a nombre del Mutuante. Tabla de amortización anexa hace parte integral.</p>
     <p><strong>CUARTA — DESTINO:</strong> Consumo personal / capital de trabajo.</p>
     <p><strong>QUINTA — DECLARACIONES:</strong> El Mutuario declara que los recursos no provienen de actividades ilícitas (Ley 1708). Autoriza consulta y reporte en centrales de riesgo TransUnion y DataCrédito Experian conforme Ley 1266 de 2008.</p>
     <p><strong>SEXTA — COBRANZA:</strong> Las gestiones de cobranza se harán en horarios permitidos por Ley 2300 de 2023 (Lunes a Viernes 7am-7pm, Sábados 8am-3pm). No domingos ni festivos.</p>
@@ -2424,8 +2433,10 @@ function generarHabeas(){
 function generarKitCompleto(){
   const d = obtenerDatosLegales(); if(!d) return;
   const totalPagar = d.monto + (d.monto * d.interes * d.plazo / 100);
-  const cuotas = d.plazo * 2;
+  const factorPeriodicidad = d.periodicidad === 'quincenal' ? 2 : 1;
+  const cuotas = d.plazo * factorPeriodicidad;
   const valorCuota = totalPagar / cuotas;
+  const periodoTexto = d.periodicidad === 'quincenal' ? 'cuotas quincenales (cada 15 días)' : 'cuotas mensuales (cada 30 días)';
   const ea = ((Math.pow(1 + d.interes/100, 12) - 1) * 100).toFixed(2);
   const fechaVenc = d.vencimiento || new Date(Date.now() + d.plazo*30*86400000).toISOString().split('T')[0];
 
@@ -2434,7 +2445,7 @@ function generarKitCompleto(){
     <p>Entre los suscritos: <strong>EL MUTUANTE:</strong> ${escapeHTML(d.mutuante)}, CC ${escapeHTML(d.mutuanteCC)}, con domicilio en ${escapeHTML(d.ciudad)}, quien actúa con RECURSOS PROPIOS, no realiza captación masiva ni habitual de dineros del público, y <strong>EL MUTUARIO:</strong> ${escapeHTML(d.nombre)}, CC ${escapeHTML(d.cc)}, con domicilio en ${escapeHTML(d.direccion)}.</p>
     <p><strong>PRIMERA — OBJETO:</strong> El Mutuante entrega en calidad de mutuo la suma de ${formatoPeso(d.monto)} (${numeroALetras(d.monto)}).</p>
     <p><strong>SEGUNDA — INTERÉS:</strong> ${d.interes.toFixed(2)}% mensual (${ea}% E.A.), por debajo de la usura. Mora: máximo legal.</p>
-    <p><strong>TERCERA — PLAZO:</strong> ${d.plazo*30} días, en ${cuotas} cuotas quincenales de ${formatoPeso(valorCuota)}, vía Nequi/Bancolombia ${escapeHTML(d.nequi)}.</p>
+    <p><strong>TERCERA — PLAZO:</strong> ${d.plazo*30} días, en ${cuotas} ${periodoTexto} de ${formatoPeso(valorCuota)}, vía Nequi/Bancolombia ${escapeHTML(d.nequi)}.</p>
     <p><strong>CUARTA — DESTINO:</strong> Consumo personal / capital de trabajo.</p>
     <p><strong>QUINTA — DECLARACIONES:</strong> Recursos lícitos (Ley 1708). Autoriza centrales de riesgo (Ley 1266/2008).</p>
     <p><strong>SEXTA — COBRANZA:</strong> Ley 2300 de 2023 (L-V 7am-7pm, Sáb 8am-3pm).</p>
@@ -2467,16 +2478,16 @@ function generarKitCompleto(){
 
   const tabla = `
     <h1>Tabla de Amortización — Anexo</h1>
-    <p>Capital: ${formatoPeso(d.monto)} · Interés mensual: ${d.interes.toFixed(2)}% · Plazo: ${d.plazo} mes(es) · ${cuotas} cuotas quincenales.</p>
+    <p>Capital: ${formatoPeso(d.monto)} · Interés mensual: ${d.interes.toFixed(2)}% · Plazo: ${d.plazo} mes(es) · ${cuotas} ${periodoTexto}.</p>
     <table>
       <thead><tr><th>N°</th><th>Saldo Inicial</th><th>Interés</th><th>Abono Capital</th><th>Cuota Total</th><th>Saldo Final</th></tr></thead>
       <tbody>
         ${(()=>{
           let s = d.monto; let filas = '';
           const capital = d.monto / cuotas;
-          const tasaQ = d.interes/2/100;
+          const interesCuota = (d.monto * d.interes * d.plazo / 100) / cuotas;
           for(let i=1;i<=cuotas;i++){
-            const int = s * tasaQ;
+            const int = interesCuota;
             const cuota = capital + int;
             const sf = s - capital;
             filas += `<tr><td>${i}</td><td>${formatoPeso(s)}</td><td>${formatoPeso(int)}</td><td>${formatoPeso(capital)}</td><td><strong>${formatoPeso(cuota)}</strong></td><td>${formatoPeso(Math.max(0,sf))}</td></tr>`;
