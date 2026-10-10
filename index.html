@@ -241,7 +241,24 @@
    </div>
    <div class="login-field" id="confirm-pass-field" style="display:none"><input type="password" id="login-pass-confirm" placeholder="Confirmar contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter') intentarLogin()"></div>
    <button class="btn btn-primary" style="width:100%;padding:14px" onclick="intentarLogin()" id="btn-login">🔐 Ingresar</button>
+   <button type="button" class="btn btn-ghost btn-sm" id="btn-forgot-password" onclick="mostrarRecuperacionPassword()" style="width:100%;margin-top:8px">¿Olvidaste tu contraseña?</button>
    <div class="login-error" id="login-error"></div>
+   <div id="password-recovery-panel" style="display:none;margin-top:14px">
+     <h3 style="margin-bottom:8px">Recuperar contraseña</h3>
+     <p style="opacity:.75;font-size:.9rem;margin-bottom:12px">Escribe tu correo y te enviaremos un enlace para recuperar el acceso.</p>
+     <div class="recovery-field"><input type="email" id="recovery-email" placeholder="Correo electrónico" autocomplete="email" onkeydown="if(event.key==='Enter') enviarCorreoRecuperacion()"></div>
+     <button type="button" class="btn btn-primary" id="btn-send-recovery" style="width:100%;padding:14px" onclick="enviarCorreoRecuperacion()">Enviar enlace</button>
+     <button type="button" class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="ocultarRecuperacionPassword()">Volver al inicio de sesión</button>
+     <div class="login-error" id="recovery-message"></div>
+   </div>
+   <div id="new-password-panel" style="display:none;margin-top:14px">
+     <h3 style="margin-bottom:8px">Crear nueva contraseña</h3>
+     <p style="opacity:.75;font-size:.9rem;margin-bottom:12px">Elige una contraseña nueva para tu cuenta.</p>
+     <div class="recovery-field"><input type="password" id="new-password" placeholder="Nueva contraseña" autocomplete="new-password"></div>
+     <div class="recovery-field"><input type="password" id="new-password-confirm" placeholder="Confirmar nueva contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter') actualizarPasswordSupabase()"></div>
+     <button type="button" class="btn btn-primary" id="btn-update-password" style="width:100%;padding:14px" onclick="actualizarPasswordSupabase()">Guardar nueva contraseña</button>
+     <div class="login-error" id="new-password-message"></div>
+   </div>
    <div class="login-account" id="active-account-label"></div>
    <div class="login-hint">🔒 Supabase Auth protege tu cuenta y permite acceder desde varios dispositivos.<br><br>💡 Cada correo tiene sus propios clientes, préstamos, notas y configuración.</div>
  </div>
@@ -1009,16 +1026,86 @@ function instalarPWA(){
 let authMode = 'login';
 let datosCargadosUserId = null;
 let authListenerRegistrado = false;
+let recuperacionActiva = false;
 function mostrarErrorLogin(mensaje, esError=true) {
   const err=document.getElementById('login-error'); if(!err) return;
   err.textContent=mensaje; err.classList.add('show'); err.style.color=esError?'#fca5a5':'#6ee7b7';
 }
 function ocultarErrorLogin(){ const err=document.getElementById('login-error'); if(err){err.textContent='';err.classList.remove('show');} }
 function mostrarPantallaLogin(){
-  currentUser=null; datosCargadosUserId=null;
+  currentUser=null; datosCargadosUserId=null; recuperacionActiva=false;
   document.getElementById('login-overlay')?.classList.remove('hidden');
   const pass=document.getElementById('login-pass'); if(pass) pass.value='';
-  ocultarErrorLogin(); actualizarIndicadorSincronizacion('local','Inicia sesión para sincronizar con Supabase');
+  ocultarErrorLogin(); ocultarPanelesRecuperacion(); cambiarModoAuth('login'); actualizarIndicadorSincronizacion('local','Inicia sesión para sincronizar con Supabase');
+}
+function esUrlRecuperacion(){
+  const url=new URL(window.location.href);
+  return url.searchParams.get('recovery')==='1' || window.location.hash.includes('type=recovery');
+}
+function mostrarMensajeRecuperacion(mensaje, esError=false){
+  const elemento=document.getElementById('recovery-message'); if(!elemento) return;
+  elemento.textContent=mensaje; elemento.classList.toggle('show',Boolean(mensaje)); elemento.style.color=esError?'#fca5a5':'#6ee7b7';
+}
+function mostrarMensajeNuevaPassword(mensaje, esError=false){
+  const elemento=document.getElementById('new-password-message'); if(!elemento) return;
+  elemento.textContent=mensaje; elemento.classList.toggle('show',Boolean(mensaje)); elemento.style.color=esError?'#fca5a5':'#6ee7b7';
+}
+function ocultarPanelesRecuperacion(){
+  document.getElementById('password-recovery-panel')?.style.setProperty('display','none');
+  document.getElementById('new-password-panel')?.style.setProperty('display','none');
+  document.getElementById('btn-forgot-password')?.style.removeProperty('display');
+  document.getElementById('btn-login')?.style.removeProperty('display');
+  document.querySelector('.auth-mode')?.classList.remove('hidden');
+  document.querySelectorAll('#login-overlay .login-field').forEach(elemento=>elemento.style.removeProperty('display'));
+  mostrarMensajeRecuperacion(''); mostrarMensajeNuevaPassword('');
+}
+function mostrarRecuperacionPassword(){
+  recuperacionActiva=false;
+  document.querySelector('.auth-mode')?.classList.add('hidden');
+  document.querySelectorAll('#login-overlay .login-field').forEach(elemento=>elemento.style.display='none');
+  document.getElementById('btn-login')?.style.setProperty('display','none');
+  document.getElementById('btn-forgot-password')?.style.setProperty('display','none');
+  document.getElementById('password-recovery-panel')?.style.setProperty('display','block');
+  const email=document.getElementById('recovery-email'), loginEmail=document.getElementById('login-user');
+  if(email && loginEmail?.value) email.value=loginEmail.value.trim();
+  mostrarMensajeRecuperacion(''); email?.focus();
+}
+function ocultarRecuperacionPassword(){
+  ocultarPanelesRecuperacion(); cambiarModoAuth('login');
+}
+async function enviarCorreoRecuperacion(){
+  const email=(document.getElementById('recovery-email')?.value||'').trim().toLowerCase(); mostrarMensajeRecuperacion('');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ mostrarMensajeRecuperacion('Escribe un correo electrónico válido.',true); return; }
+  const boton=document.getElementById('btn-send-recovery'); if(boton){boton.disabled=true;boton.textContent='Enviando...';}
+  try{
+    const redirectTo=`${window.location.origin}${window.location.pathname}?recovery=1`;
+    const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo});
+    if(error) throw error;
+    mostrarMensajeRecuperacion('Si el correo está registrado, recibirás un enlace para recuperar tu contraseña.');
+  }catch(err){ console.error('Error enviando recuperación:',err); mostrarMensajeRecuperacion('No se pudo enviar el correo. Intenta nuevamente.',true); }
+  finally{ if(boton){boton.disabled=false;boton.textContent='Enviar enlace';} }
+}
+function mostrarFormularioNuevaPassword(){
+  recuperacionActiva=true; document.getElementById('login-overlay')?.classList.remove('hidden');
+  document.querySelector('.auth-mode')?.classList.add('hidden');
+  document.querySelectorAll('#login-overlay .login-field').forEach(elemento=>elemento.style.display='none');
+  document.getElementById('btn-login')?.style.setProperty('display','none');
+  document.getElementById('btn-forgot-password')?.style.setProperty('display','none');
+  document.getElementById('password-recovery-panel')?.style.setProperty('display','none');
+  document.getElementById('new-password-panel')?.style.setProperty('display','block');
+  mostrarMensajeNuevaPassword(''); document.getElementById('new-password')?.focus();
+}
+async function actualizarPasswordSupabase(){
+  const password=document.getElementById('new-password')?.value||'', confirm=document.getElementById('new-password-confirm')?.value||''; mostrarMensajeNuevaPassword('');
+  if(password.length<6){mostrarMensajeNuevaPassword('La contraseña debe tener al menos 6 caracteres.',true);return;}
+  if(password!==confirm){mostrarMensajeNuevaPassword('Las contraseñas no coinciden.',true);return;}
+  const boton=document.getElementById('btn-update-password'); if(boton){boton.disabled=true;boton.textContent='Guardando...';}
+  try{
+    const {error}=await supabaseClient.auth.updateUser({password}); if(error) throw error;
+    mostrarMensajeNuevaPassword('Contraseña actualizada correctamente. Ya puedes iniciar sesión.');
+    setTimeout(async()=>{ await supabaseClient.auth.signOut({scope:'local'}); const url=new URL(window.location.href); url.search='';url.hash='';window.history.replaceState({},document.title,url.pathname);window.location.reload(); },1800);
+  }catch(err){console.error('Error actualizando contraseña:',err);mostrarMensajeNuevaPassword('No fue posible actualizar la contraseña. Solicita un enlace nuevo.',true);}
+  finally{if(boton){boton.disabled=false;boton.textContent='Guardar nueva contraseña';}}
 }
 function cambiarModoAuth(mode){
   authMode=mode;
@@ -1062,17 +1149,23 @@ async function procesarSesionSupabase(session){
   const label=document.getElementById('active-account-label'); if(label) label.textContent=`Sesión activa: ${currentUser.email}`;
   document.getElementById('login-pass').value=''; document.getElementById('login-pass-confirm').value=''; ocultarErrorLogin();
   cambiarModoAuth('login');
+  if(recuperacionActiva) return;
   if(datosCargadosUserId!==currentUser.id) await cargarDatosSupabaseAuth();
 }
 async function iniciarAplicacionSupabase(){
-  const { data:{ session } }=await supabaseClient.auth.getSession();
-  if(session?.user) await procesarSesionSupabase(session); else mostrarPantallaLogin();
   if(!authListenerRegistrado){
     authListenerRegistrado=true;
-    supabaseClient.auth.onAuthStateChange((event, nextSession)=>{
-      setTimeout(()=>{ if(nextSession?.user) procesarSesionSupabase(nextSession); else mostrarPantallaLogin(); },0);
+    supabaseClient.auth.onAuthStateChange((event,nextSession)=>{
+      setTimeout(()=>{
+        if(event==='PASSWORD_RECOVERY'){ currentUser=nextSession?.user||null; mostrarFormularioNuevaPassword(); return; }
+        if(nextSession?.user) procesarSesionSupabase(nextSession); else if(!esUrlRecuperacion()) mostrarPantallaLogin();
+      },0);
     });
   }
+  const { data:{ session } }=await supabaseClient.auth.getSession();
+  if(esUrlRecuperacion()){ currentUser=session?.user||currentUser; mostrarFormularioNuevaPassword(); }
+  else if(session?.user) await procesarSesionSupabase(session);
+  else mostrarPantallaLogin();
 }
 async function cerrarSesion(){
   const { error }=await supabaseClient.auth.signOut({ scope:'local' });

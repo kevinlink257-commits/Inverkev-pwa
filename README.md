@@ -24,6 +24,14 @@ Sistema avanzado de crédito y cobranza, instalable como PWA.
 4. Ejecuta el archivo [`supabase-schema.sql`](./supabase-schema.sql) desde **SQL Editor**.
 5. Confirma que la tabla `public.user_data` tenga RLS habilitado.
 
+Para recuperación de contraseña agrega también estas Redirect URLs:
+
+```text
+https://inverkev-pwa.vercel.app/index.html?recovery=1
+http://localhost:4173/index.html?recovery=1
+http://127.0.0.1:4173/index.html?recovery=1
+```
+
 El archivo SQL crea una fila por usuario en `user_data`, vinculada a `auth.users(id)`. Las políticas permiten que cada usuario solamente lea, cree, actualice o elimine su propia fila.
 
 ## Login
@@ -33,6 +41,20 @@ La aplicación usa el correo y la contraseña de **Supabase Auth**. Si está act
 Las credenciales no se almacenan en `localStorage`, no se valida ninguna contraseña dentro del HTML y no se usa `sessionStorage` como mecanismo de autenticación.
 
 La clave incluida en el frontend debe ser únicamente la clave pública `publishable` o `anon`. Nunca publiques una clave `service_role`.
+
+## Recuperación de contraseña
+
+El enlace **¿Olvidaste tu contraseña?** utiliza `resetPasswordForEmail()`. Supabase envía el correo y devuelve al usuario a la URL `?recovery=1`. Inverkev detecta el evento `PASSWORD_RECOVERY`, muestra el formulario de nueva contraseña y actualiza la cuenta mediante `updateUser({ password })`.
+
+Para probarlo:
+
+1. Solicita el enlace con un correo registrado.
+2. Abre el enlace recibido.
+3. Escribe y confirma una contraseña de al menos seis caracteres.
+4. Guarda la contraseña.
+5. Inicia sesión nuevamente con la nueva contraseña.
+
+En producción se recomienda configurar un proveedor SMTP propio en Supabase para mejorar la entrega de los correos.
 
 ## Sincronización
 
