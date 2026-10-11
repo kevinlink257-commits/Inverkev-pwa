@@ -1768,7 +1768,46 @@ function registrarAbonoCapital(e) {
 }
 
 // ===== TICKETS =====
+function esPWAStandalone(){
+  return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function imprimirHTMLEnVentanaActual(contenido, titulo='Comprobante Inverkev', estilos=''){
+  const area=document.getElementById('ticket-area');
+  if(!area){ notificar('No se encontró el área de impresión','error'); return false; }
+  const contenidoAnterior=area.innerHTML;
+  const tituloAnterior=document.title;
+  const estiloTemporal=document.createElement('style');
+  estiloTemporal.dataset.inverkevPrint='true';
+  estiloTemporal.textContent=estilos;
+  document.head.appendChild(estiloTemporal);
+  area.innerHTML=contenido;
+  area.dataset.printing='true';
+  document.title=titulo;
+  let limpiado=false;
+  const limpiar=()=>{
+    if(limpiado)return;
+    limpiado=true;
+    area.innerHTML=contenidoAnterior;
+    area.removeAttribute('data-printing');
+    document.title=tituloAnterior;
+    estiloTemporal.remove();
+    window.removeEventListener('afterprint',limpiar);
+  };
+  window.addEventListener('afterprint',limpiar,{once:true});
+  try{
+    window.focus();
+    window.print();
+    return true;
+  }catch(error){
+    limpiar();
+    notificar('No se pudo abrir el diálogo de impresión','error');
+    console.error('Error de impresión PWA:',error);
+    return false;
+  }
+}
 function imprimirDocumentoBlanco(contenido, titulo='Comprobante Inverkev') {
+  if(esPWAStandalone()) return imprimirHTMLEnVentanaActual(`<main class="print-document">${contenido}</main>`,titulo);
+
   const ventana = window.open('', '_blank');
   if(!ventana) { notificar('Permite las ventanas emergentes para imprimir el comprobante', 'error'); return false; }
   ventana.document.open();
@@ -1940,8 +1979,12 @@ function imprimirHistorialCliente(doc) {
   const cliente = db.clientes.find(c => String(c.doc) === String(doc));
   if(!cliente) { notificar('No se encontró el cliente', 'error'); return; }
   const prestamos = Array.isArray(cliente.prestamos) ? cliente.prestamos : [];
-  const ventana = window.open('', '_blank');
-  if(!ventana) { notificar('Permite las ventanas emergentes para imprimir el historial', 'error'); return; }
+  const enPWA = esPWAStandalone();
+  let ventana = null;
+  if(!enPWA){
+    ventana = window.open('', '_blank');
+    if(!ventana) { notificar('Permite las ventanas emergentes para imprimir el historial', 'error'); return; }
+  }
 
   const filasPrestamos = prestamos.map((p, indice) => {
     const est = calcularEstadoPrestamo(p);
@@ -2017,6 +2060,14 @@ function imprimirHistorialCliente(doc) {
       })();
     <\/script>
   </body></html>`;
+  if(enPWA){
+    const documentoTemporal=new DOMParser().parseFromString(html,'text/html');
+    const estilos=documentoTemporal.head.querySelectorAll('style');
+    const css=Array.from(estilos).map(estilo=>estilo.textContent||'').join('\n');
+    const cuerpo=documentoTemporal.body.innerHTML.replace(/<script[\s\S]*?<\/script>/gi,'');
+    imprimirHTMLEnVentanaActual(cuerpo,`Historial - ${cliente.nombre || 'cliente'}`,css);
+    return;
+  }
   ventana.document.open();
   ventana.document.write(html);
   ventana.document.close();

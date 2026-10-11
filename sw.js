@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inverkev-pwa-v6';
+const CACHE_NAME = 'inverkev-pwa-v7';
 const ASSETS = [
   './',
   './index.html',
