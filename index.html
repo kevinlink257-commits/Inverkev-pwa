@@ -133,7 +133,18 @@
    .notif.success{border-left:3px solid var(--success)}
    .notif.error{border-left:3px solid var(--danger)}
    #ticket-area{display:none}
-   @media print{body *{visibility:hidden}#ticket-area,#ticket-area *{visibility:visible}#ticket-area{position:absolute;left:0;top:0;width:100%;display:block!important;background:#fff;color:#000;padding:20px}}
+   body.pwa-print-mode{background:#fff!important;color:#000!important}
+   body.pwa-print-mode > *{display:none!important;visibility:hidden!important}
+   body.pwa-print-mode > #ticket-area{display:block!important;visibility:visible!important;position:fixed;inset:0;z-index:2147483647;overflow:visible;background:#fff!important;color:#000!important;padding:12px}
+   body.pwa-print-mode > #ticket-area *{visibility:visible!important;color:#000}
+   @media print{
+     html,body{background:#fff!important;color:#000!important;margin:0!important;padding:0!important}
+     body.pwa-print-mode > *{display:none!important;visibility:hidden!important}
+     body.pwa-print-mode > #ticket-area{display:block!important;visibility:visible!important;position:absolute!important;left:0!important;top:0!important;inset:auto 0 auto 0!important;width:100%!important;min-height:0!important;background:#fff!important;color:#000!important;padding:10mm!important;overflow:visible!important}
+     body.pwa-print-mode > #ticket-area,#ticket-area *{visibility:visible!important}
+     body.pwa-print-mode > #ticket-area *{background-color:transparent;color:#000}
+   }
+   @media print{body:not(.pwa-print-mode) *{visibility:hidden}body:not(.pwa-print-mode) #ticket-area,body:not(.pwa-print-mode) #ticket-area *{visibility:visible}body:not(.pwa-print-mode) #ticket-area{position:absolute;left:0;top:0;width:100%;display:block!important;background:#fff;color:#000;padding:20px}}
    @media(max-width:900px){.grid-2,.grid-3,.calc-grid,.mv-grid{grid-template-columns:1fr}header{align-items:center;padding:13px 14px}.header-actions{flex:0 0 auto}.header-tools{position:absolute;top:calc(100% + 8px);right:0;left:0;padding:10px;background:rgba(18,18,22,.97);border:1px solid var(--glass-border);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.55);z-index:110}.header-tools .action-btns{flex:1}.header-tools .menu-wrapper{margin-left:auto}.dropdown{top:calc(100% + 8px)}}
    @media(max-width:520px){body{padding:10px}.logo-titulo{gap:8px}.logo-titulo svg{width:34px;height:34px}.logo-titulo h1{font-size:1.25rem}.logo-titulo p{font-size:.7rem}.header-tools{gap:6px}.header-tools .btn-sm{padding:7px 8px;font-size:.72rem}.menu-btn{padding:8px 10px}.dropdown{right:0;max-height:calc(100vh - 90px)}}
    @keyframes fall{0%{transform:translateY(-10vh) rotate(0deg) scale(.5);opacity:1}10%{opacity:1}90%{opacity:1}100%{transform:translateY(110vh) rotate(720deg) scale(1.2);opacity:0}}
@@ -1778,22 +1789,29 @@ function imprimirHTMLEnVentanaActual(contenido, titulo='Comprobante Inverkev', e
   const tituloAnterior=document.title;
   const estiloTemporal=document.createElement('style');
   estiloTemporal.dataset.inverkevPrint='true';
-  estiloTemporal.textContent=estilos;
+  estiloTemporal.textContent=`${estilos}
+@media print{html,body{background:#fff!important;color:#000!important}body.pwa-print-mode > #ticket-area,body.pwa-print-mode > #ticket-area *{visibility:visible!important;opacity:1!important}}`;
   document.head.appendChild(estiloTemporal);
   area.innerHTML=contenido;
   area.dataset.printing='true';
+  document.body.classList.add('pwa-print-mode');
   document.title=titulo;
   let limpiado=false;
+  let temporizadorRestauracion=null;
   const limpiar=()=>{
     if(limpiado)return;
     limpiado=true;
+    if(temporizadorRestauracion) clearTimeout(temporizadorRestauracion);
     area.innerHTML=contenidoAnterior;
     area.removeAttribute('data-printing');
+    document.body.classList.remove('pwa-print-mode');
     document.title=tituloAnterior;
     estiloTemporal.remove();
     window.removeEventListener('afterprint',limpiar);
   };
   window.addEventListener('afterprint',limpiar,{once:true});
+  // Algunos navegadores Android/PWA no emiten afterprint al cancelar el diálogo.
+  temporizadorRestauracion=setTimeout(limpiar,15000);
   try{
     window.focus();
     window.print();
