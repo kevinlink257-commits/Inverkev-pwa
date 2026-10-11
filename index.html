@@ -22,11 +22,11 @@
    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',-apple-system,sans-serif}
    body{background:var(--bg);color:var(--text);padding:20px;display:flex;flex-direction:column;min-height:100vh;position:relative;overflow-x:hidden;transition:background .3s}
    body::before,body::after{content:'';position:fixed;border-radius:50%;filter:blur(120px);z-index:-1;pointer-events:none}
-   body::before{top:-10%;left:-10%;width:50vw;height:50vw;background:radial-gradient(circle,rgba(124,58,237,0.15) 0%,transparent 70%)}
-   body::after{bottom:-10%;right:-10%;width:40vw;height:40vw;background:radial-gradient(circle,rgba(56,189,248,0.12) 0%,transparent 70%)}
+   body::before{top:-10%;left:-10%;width:50vw;height:50vw;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 22%,transparent) 0%,transparent 70%)}
+   body::after{bottom:-10%;right:-10%;width:40vw;height:40vw;background:radial-gradient(circle,color-mix(in srgb,var(--secondary) 18%,transparent) 0%,transparent 70%)}
    .container{max-width:1240px;margin:0 auto;flex:1;width:100%;position:relative;z-index:1}
    .glass{background:var(--glass-bg);backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:0 4px 30px rgba(0,0,0,0.3)}
-   header{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:24px;padding:16px 20px;background:linear-gradient(135deg, rgba(59,7,100,0.3), rgba(30,27,75,0.3));backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;box-shadow:0 10px 40px -10px rgba(0,0,0,0.5);position:sticky;top:12px;z-index:50;min-width:0}
+   header{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:24px;padding:16px 20px;background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 42%,transparent),color-mix(in srgb,var(--accent) 28%,transparent));backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;box-shadow:0 10px 40px -10px rgba(0,0,0,0.5);position:sticky;top:12px;z-index:50;min-width:0}
    .logo-titulo{display:flex;align-items:center;gap:14px;min-width:0;flex:1}
    .logo-titulo > div{min-width:0}
    .logo-titulo h1,.logo-titulo p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -35,7 +35,7 @@
    header.header-collapsed .header-collapse{transform:rotate(180deg)}
    header.header-collapsed .header-tools{display:none}
 
-   .logo-titulo svg{width:42px;height:42px;fill:var(--secondary);filter:drop-shadow(0 0 10px rgba(56,189,248,0.4))}
+   .logo-titulo svg{width:42px;height:42px;fill:var(--secondary);filter:drop-shadow(0 0 10px color-mix(in srgb,var(--secondary) 55%,transparent))}
    .logo-titulo h1{font-size:1.7rem;font-weight:800;letter-spacing:-0.5px;line-height:1}
    .logo-titulo p{color:var(--text-muted);font-size:0.9rem;margin-top:2px}
    .header-actions{display:flex;align-items:center;gap:10px;min-width:0}
@@ -54,9 +54,9 @@
    .menu-section-title{font-size:.7rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);font-weight:700;padding:14px 10px 6px;display:flex;align-items:center;gap:6px}
    .menu-item{width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;background:transparent;border:1px solid transparent;color:var(--text);cursor:pointer;text-align:left;font-size:.92rem;font-weight:500;transition:all .18s}
    .menu-item:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.06);transform:translateX(2px)}
-   .menu-item.active{background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(124,58,237,0.15));border-color:rgba(56,189,248,0.25);color:#fff}
+   .menu-item.active{background:linear-gradient(135deg,color-mix(in srgb,var(--secondary) 18%,transparent),color-mix(in srgb,var(--accent) 18%,transparent));border-color:color-mix(in srgb,var(--secondary) 35%,transparent);color:#fff}
    .menu-item .ico{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,0.06);font-size:16px;flex-shrink:0}
-   .menu-item.active .ico{background:rgba(56,189,248,0.2)}
+   .menu-item.active .ico{background:color-mix(in srgb,var(--secondary) 24%,transparent)}
    .badge-new{font-size:.65rem;background:var(--secondary);color:#000;padding:2px 6px;border-radius:20px;font-weight:700;margin-left:auto}
    .nav-tabs{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}
    .tab-btn{background:rgba(255,255,255,0.03);color:var(--text-muted);border:1px solid var(--glass-border);padding:11px 18px;border-radius:12px;cursor:pointer;font-weight:500;transition:all .25s;backdrop-filter:blur(8px);font-size:.9rem}
@@ -77,7 +77,7 @@
    input,select,textarea{width:100%;padding:13px 15px;background:rgba(0,0,0,0.25);border:1px solid var(--glass-border);border-radius:10px;font-size:.95rem;color:var(--text);outline:none;transition:all .2s}
    textarea{resize:vertical;min-height:90px}
    input:hover,select:hover,textarea:hover{border-color:var(--glass-highlight)}
-   input:focus,select:focus,textarea:focus{border-color:var(--secondary);background:rgba(0,0,0,0.45);box-shadow:0 0 0 4px rgba(56,189,248,0.15)}
+   input:focus,select:focus,textarea:focus{border-color:var(--secondary);background:rgba(0,0,0,0.45);box-shadow:0 0 0 4px color-mix(in srgb,var(--secondary) 18%,transparent)}
    button.btn{background:#fff;color:#000;border:1px solid transparent;padding:11px 18px;border-radius:10px;cursor:pointer;font-weight:600;font-size:.92rem;transition:all .2s;display:inline-flex;justify-content:center;align-items:center;gap:8px}
    button.btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,255,255,0.18)}
    button.btn:active{transform:scale(.97)}
@@ -111,7 +111,14 @@
    .close-x{background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);width:32px;height:32px;border-radius:8px;cursor:pointer;color:var(--text);display:grid;place-items:center}
    .color-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--glass-border)}
    .color-row:last-child{border:0}
-   .color-input{width:44px;height:36px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;padding:2px}
+   .color-input{width:52px;height:38px;border-radius:9px;border:2px solid var(--glass-border);background:transparent;cursor:pointer;padding:2px;transition:transform .18s,border-color .18s,box-shadow .18s}
+   .color-input:hover,.color-input:focus{transform:scale(1.08);border-color:var(--secondary);box-shadow:0 0 0 4px color-mix(in srgb,var(--secondary) 20%,transparent)}
+   .color-preview{width:100%;height:8px;border-radius:99px;margin-top:8px;background:linear-gradient(90deg,var(--primary),var(--secondary),var(--accent),var(--success),var(--danger));box-shadow:0 0 18px color-mix(in srgb,var(--secondary) 30%,transparent);transition:background .25s,box-shadow .25s}
+   body.theme-light{--bg:#f4f7fb;--glass-bg:rgba(255,255,255,.82);--glass-border:rgba(15,23,42,.12);--glass-highlight:rgba(15,23,42,.22);--text:#172033;--text-muted:#526078}
+   body.theme-ocean{--bg:#061827;--glass-bg:rgba(5,35,56,.72);--glass-border:rgba(56,189,248,.24);--glass-highlight:rgba(56,189,248,.42);--text:#e0f2fe;--text-muted:#93c5fd}
+   body.theme-contrast{--bg:#050505;--glass-bg:rgba(0,0,0,.94);--glass-border:rgba(255,255,255,.46);--glass-highlight:#fff;--text:#fff;--text-muted:#e5e7eb}
+   body.theme-compact{--radius:9px;--blur:5px}
+
    .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
    .calc-display{background:#000;border:1px solid var(--glass-border);border-radius:12px;padding:16px;text-align:right;font-size:1.8rem;font-weight:700;min-height:64px;letter-spacing:-1px;margin-bottom:12px;overflow:hidden}
    .calc-keys{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
@@ -727,13 +734,15 @@
  <div class="modal-body">
    <div class="form-group"><label>Intensidad de desenfoque (blur)</label><input type="range" id="estilo-blur" min="0" max="30" value="16" oninput="aplicarEstilo()"><small id="blur-val" style="color:var(--text-muted)">16px</small></div>
    <div class="form-group"><label>Bordes redondeados</label><input type="range" id="estilo-radius" min="8" max="28" value="16" oninput="aplicarEstilo()"><small id="radius-val" style="color:var(--text-muted)">16px</small></div>
-   <div class="form-group"><label>Modo de interfaz</label><select id="estilo-modo" onchange="aplicarEstilo()"><option value="glass">Glassmorphism (original)</option><option value="solid">Sólido oscuro</option><option value="minimal">Minimalista</option></select></div>
+   <div class="form-group"><label>Modo de interfaz</label><select id="estilo-modo" onchange="aplicarEstilo()"><option value="glass">Glassmorphism (original)</option><option value="solid">Sólido oscuro</option><option value="minimal">Minimalista</option><option value="light">Claro profesional</option><option value="ocean">Azul oceánico</option><option value="contrast">Alto contraste</option><option value="compact">Compacto</option></select></div>
  </div><div class="modal-footer"><button class="btn btn-ghost" onclick="resetEstilo()">Restablecer</button><button class="btn btn-primary" onclick="closeModal('modal-estilo')">Listo</button></div></div>
 </div>
 
 <div class="modal-overlay" id="modal-colores" onclick="if(event.target===this)closeModal('modal-colores')">
  <div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h3>🌈 Colores del Sistema</h3><button class="close-x" onclick="closeModal('modal-colores')">✕</button></div>
  <div class="modal-body">
+   <div class="color-preview" id="color-preview" aria-label="Vista previa de colores seleccionados"></div>
+   <p style="font-size:.8rem;color:var(--text-muted);margin:8px 0 4px">El cambio se aplica inmediatamente a la interfaz.</p>
    <div class="color-row"><div><strong>Primario</strong><br><small style="color:var(--text-muted)">Morado principal</small></div><input type="color" id="color-primary" class="color-input" value="#581c87" oninput="aplicarColores()"></div>
    <div class="color-row"><div><strong>Secundario</strong><br><small style="color:var(--text-muted)">Cyan brillante</small></div><input type="color" id="color-secondary" class="color-input" value="#38bdf8" oninput="aplicarColores()"></div>
    <div class="color-row"><div><strong>Acento</strong><br><small style="color:var(--text-muted)">Violeta</small></div><input type="color" id="color-accent" class="color-input" value="#7c3aed" oninput="aplicarColores()"></div>
@@ -849,6 +858,7 @@ function pintarDatosAplicacion() {
   db = crearDBSegura(db);
   if(!db.config.presupuesto) db.config.presupuesto = 10000000;
   migrarDatos(); idiomaActual = db.config.idioma || 'es';
+  sincronizarControlesVisuales();
   renderizarDashboard(); renderizarHistorial(); actualizarSelectPrestamos(); actualizarSelectCapital(); renderizarNotas(); renderizarGraficos(); renderUltimosClientes(); initModuloAdicional();
 }
 async function cargarDatosSupabaseAuth() {
@@ -1789,7 +1799,11 @@ function imprimirHTMLEnVentanaActual(contenido, titulo='Comprobante Inverkev', e
   const tituloAnterior=document.title;
   const estiloTemporal=document.createElement('style');
   estiloTemporal.dataset.inverkevPrint='true';
-  estiloTemporal.textContent=`${estilos}
+  estiloTemporal.textContent=`@page{size:A4 portrait;margin:12mm}
+html,body{width:100%;max-width:100%;zoom:1!important;-webkit-text-size-adjust:100%;background:#fff!important;color:#000!important}
+body.pwa-print-mode > #ticket-area{width:100%!important;max-width:794px!important;margin:0 auto!important;padding:0!important;transform:none!important;zoom:1!important;font-size:12pt!important;line-height:1.35!important}
+body.pwa-print-mode > #ticket-area .print-document{width:100%!important;max-width:794px!important;margin:0 auto!important;padding:0!important;background:#fff!important;color:#000!important}
+${estilos}
 @media print{html,body{background:#fff!important;color:#000!important}body.pwa-print-mode > #ticket-area,body.pwa-print-mode > #ticket-area *{visibility:visible!important;opacity:1!important}}`;
   document.head.appendChild(estiloTemporal);
   area.innerHTML=contenido;
@@ -2285,46 +2299,56 @@ function renderUltimosClientes(){
 }
 
 // ===== ESTILOS Y COLORES =====
+const CONFIG_VISUAL_BASE={blur:16,radius:16,modo:'glass',primary:'#581c87',secondary:'#38bdf8',accent:'#7c3aed',success:'#10b981',danger:'#ef4444'};
+function colorToRgb(hex){
+  const limpio=String(hex||'').replace('#','');
+  if(!/^[0-9a-fA-F]{6}$/.test(limpio)) return '88,28,135';
+  return `${parseInt(limpio.slice(0,2),16)},${parseInt(limpio.slice(2,4),16)},${parseInt(limpio.slice(4,6),16)}`;
+}
+function sincronizarControlesVisuales(){
+  const c={...CONFIG_VISUAL_BASE,...(db.config||{})};
+  const set=(id,value)=>{const el=document.getElementById(id);if(el)el.value=value;};
+  set('estilo-blur',Number(c.blur)||16); set('estilo-radius',Number(c.radius)||16); set('estilo-modo',c.modo||'glass');
+  set('color-primary',c.primary); set('color-secondary',c.secondary); set('color-accent',c.accent); set('color-success',c.success); set('color-danger',c.danger);
+  aplicarEstilo(false); aplicarColores(false);
+}
+function aplicarModoVisual(modo){
+  document.body.classList.remove('theme-light','theme-ocean','theme-contrast','theme-compact');
+  if(['light','ocean','contrast','compact'].includes(modo)) document.body.classList.add(`theme-${modo}`);
+  const root=document.documentElement;
+  const border=modo==='minimal'?'rgba(255,255,255,.15)':'rgba(255,255,255,.08)';
+  root.style.setProperty('--glass-border',border);
+  if(modo==='solid') root.style.setProperty('--glass-bg','rgba(18,18,22,.95)');
+  else if(modo==='minimal') root.style.setProperty('--glass-bg','rgba(10,10,10,.8)');
+  else if(modo==='light') root.style.setProperty('--glass-bg','rgba(255,255,255,.82)');
+  else root.style.setProperty('--glass-bg','rgba(20,20,20,.4)');
+}
 function aplicarEstilo(guardar=true){
-  let blur = document.getElementById('estilo-blur')?.value || 16;
-  let radius = document.getElementById('estilo-radius')?.value || 16;
-  let modo = document.getElementById('estilo-modo')?.value || 'glass';
-  document.getElementById('blur-val').textContent = blur + 'px';
-  document.getElementById('radius-val').textContent = radius + 'px';
-  document.documentElement.style.setProperty('--blur', blur + 'px');
-  document.documentElement.style.setProperty('--radius', radius + 'px');
-  if(modo === 'solid') document.documentElement.style.setProperty('--glass-bg', 'rgba(18, 18, 22, 0.95)');
-  else if(modo === 'minimal') { document.documentElement.style.setProperty('--glass-bg', 'rgba(10, 10, 10, 0.8)'); document.documentElement.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.15)'); }
-  else document.documentElement.style.setProperty('--glass-bg', 'rgba(20, 20, 20, 0.4)');
-  if(guardar){ db.config.blur = blur; db.config.radius = radius; db.config.modo = modo; guardarDB(); }
+  const blurEntrada=Number(document.getElementById('estilo-blur')?.value);
+  const radiusEntrada=Number(document.getElementById('estilo-radius')?.value);
+  const blur=Math.max(0,Math.min(30,Number.isFinite(blurEntrada)?blurEntrada:16));
+  const radius=Math.max(8,Math.min(28,Number.isFinite(radiusEntrada)?radiusEntrada:16));
+  const modo=document.getElementById('estilo-modo')?.value||'glass';
+  const blurVal=document.getElementById('blur-val'),radiusVal=document.getElementById('radius-val');
+  if(blurVal)blurVal.textContent=blur+'px'; if(radiusVal)radiusVal.textContent=radius+'px';
+  document.documentElement.style.setProperty('--blur',blur+'px'); document.documentElement.style.setProperty('--radius',radius+'px');
+  aplicarModoVisual(modo);
+  if(guardar){db.config={...db.config,blur,radius,modo};guardarDB();notificar('Estilo de página aplicado','success');}
 }
 function resetEstilo(){
-  document.getElementById('estilo-blur').value = 16;
-  document.getElementById('estilo-radius').value = 16;
-  document.getElementById('estilo-modo').value = 'glass';
-  aplicarEstilo();
+  document.getElementById('estilo-blur').value=16;document.getElementById('estilo-radius').value=16;document.getElementById('estilo-modo').value='glass';aplicarEstilo();
 }
 function aplicarColores(guardar=true){
-  let p = document.getElementById('color-primary')?.value || '#581c87';
-  let s = document.getElementById('color-secondary')?.value || '#38bdf8';
-  let a = document.getElementById('color-accent')?.value || '#7c3aed';
-  let succ = document.getElementById('color-success')?.value || '#10b981';
-  let dang = document.getElementById('color-danger')?.value || '#ef4444';
-  document.documentElement.style.setProperty('--primary', p);
-  document.documentElement.style.setProperty('--secondary', s);
-  document.documentElement.style.setProperty('--accent', a);
-  document.documentElement.style.setProperty('--success', succ);
-  document.documentElement.style.setProperty('--danger', dang);
-  if(guardar){ db.config.primary = p; db.config.secondary = s; db.config.accent = a; db.config.success = succ; db.config.danger = dang; guardarDB(); }
+  const valores={primary:document.getElementById('color-primary')?.value||CONFIG_VISUAL_BASE.primary,secondary:document.getElementById('color-secondary')?.value||CONFIG_VISUAL_BASE.secondary,accent:document.getElementById('color-accent')?.value||CONFIG_VISUAL_BASE.accent,success:document.getElementById('color-success')?.value||CONFIG_VISUAL_BASE.success,danger:document.getElementById('color-danger')?.value||CONFIG_VISUAL_BASE.danger};
+  const root=document.documentElement;
+  Object.entries(valores).forEach(([clave,valor])=>{root.style.setProperty(`--${clave}`,valor);root.style.setProperty(`--${clave}-rgb`,colorToRgb(valor));});
+  const preview=document.getElementById('color-preview');if(preview)preview.style.background=`linear-gradient(90deg,${valores.primary},${valores.secondary},${valores.accent},${valores.success},${valores.danger})`;
+  if(guardar){db.config={...db.config,...valores};guardarDB();notificar('Color aplicado a la interfaz','success');}
 }
 function resetColores(){
-  document.getElementById('color-primary').value = '#581c87';
-  document.getElementById('color-secondary').value = '#38bdf8';
-  document.getElementById('color-accent').value = '#7c3aed';
-  document.getElementById('color-success').value = '#10b981';
-  document.getElementById('color-danger').value = '#ef4444';
-  aplicarColores();
+  Object.entries(CONFIG_VISUAL_BASE).forEach(([clave,valor])=>{const el=document.getElementById('color-'+clave);if(el)el.value=valor;});aplicarColores();
 }
+
 function cambiarIdioma(val){ idiomaActual = val; db.config.idioma = val; guardarDB(); notificar('Idioma cambiado','success'); }
 
 // ===== EXPORTAR =====
