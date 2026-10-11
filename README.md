@@ -15,6 +15,12 @@ Sistema avanzado de crédito y cobranza, instalable como PWA.
 - Respaldo local por usuario cuando la red no está disponible.
 - PWA instalable y funcionamiento offline.
 
+## Comprobantes e impresión
+
+Al registrar un abono a cuota o a capital se genera un comprobante con fondo blanco y solamente los datos del cliente, préstamo, abono y saldo. La ventana auxiliar llama al diálogo de impresión y se cierra automáticamente después de imprimir o guardar como PDF. El historial completo del cliente utiliza el mismo comportamiento y conserva todos los abonos registrados.
+
+El navegador no puede adjuntar automáticamente el PDF generado por `window.print()` ni enviarlo por WhatsApp o correo sin un servicio externo. Para automatizar ese envío se necesita una API de WhatsApp Business y un proveedor de correo, por ejemplo Resend, SendGrid o Amazon SES, conectados mediante una función de servidor o Supabase Edge Function. Nunca deben exponerse esas claves en `index.html`.
+
 ## Configuración de Supabase
 
 1. En Supabase, abre **Authentication → Providers → Email** y activa el proveedor de correo.
