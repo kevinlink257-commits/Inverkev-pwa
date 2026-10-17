@@ -140,6 +140,10 @@
    .notif.success{border-left:3px solid var(--success)}
    .notif.error{border-left:3px solid var(--danger)}
    #ticket-area{display:none}
+   /* Formatos térmicos: se aplican únicamente a comprobantes con .ticket-print-active. */
+   body.ticket-format-80mm.ticket-print-active > #ticket-area,body.ticket-format-80mm.ticket-print-active > #ticket-area .print-document{width:80mm!important;max-width:80mm!important}
+   body.ticket-format-58mm.ticket-print-active > #ticket-area,body.ticket-format-58mm.ticket-print-active > #ticket-area .print-document{width:58mm!important;max-width:58mm!important}
+   body.ticket-format-57mm.ticket-print-active > #ticket-area,body.ticket-format-57mm.ticket-print-active > #ticket-area .print-document{width:57mm!important;max-width:57mm!important}
    body.pwa-print-mode{background:#fff!important;color:#000!important}
    body.pwa-print-mode > *{display:none!important;visibility:hidden!important}
    body.pwa-print-mode > #ticket-area{display:block!important;visibility:visible!important;position:fixed;inset:0;z-index:2147483647;overflow:visible;background:#fff!important;color:#000!important;padding:12px}
@@ -735,6 +739,7 @@
    <div class="form-group"><label>Intensidad de desenfoque (blur)</label><input type="range" id="estilo-blur" min="0" max="30" value="16" oninput="aplicarEstilo()"><small id="blur-val" style="color:var(--text-muted)">16px</small></div>
    <div class="form-group"><label>Bordes redondeados</label><input type="range" id="estilo-radius" min="8" max="28" value="16" oninput="aplicarEstilo()"><small id="radius-val" style="color:var(--text-muted)">16px</small></div>
    <div class="form-group"><label>Modo de interfaz</label><select id="estilo-modo" onchange="aplicarEstilo()"><option value="glass">Glassmorphism (original)</option><option value="solid">Sólido oscuro</option><option value="minimal">Minimalista</option><option value="light">Claro profesional</option><option value="ocean">Azul oceánico</option><option value="contrast">Alto contraste</option><option value="compact">Compacto</option></select></div>
+   <div class="form-group"><label for="formato-ticket">Formato permanente de ticket</label><select id="formato-ticket" onchange="aplicarFormatoTicket()"><option value="80mm">80 mm (recomendado)</option><option value="58mm">58 mm</option><option value="57mm">57 mm</option></select><small id="formato-ticket-val" style="color:var(--text-muted)">Se usará al imprimir comprobantes de abono.</small></div>
  </div><div class="modal-footer"><button class="btn btn-ghost" onclick="resetEstilo()">Restablecer</button><button class="btn btn-primary" onclick="closeModal('modal-estilo')">Listo</button></div></div>
 </div>
 
@@ -780,7 +785,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== BASE DE DATOS Y ESTADO =====
-let db = { clientes: [], notas: [], scorings: [], config:{ blur:16, radius:16, modo:'glass', primary:'#581c87', secondary:'#38bdf8', accent:'#7c3aed', success:'#10b981', danger:'#ef4444', idioma:'es', presupuesto:10000000 } };
+let db = { clientes: [], notas: [], scorings: [], config:{ blur:16, radius:16, modo:'glass', primary:'#581c87', secondary:'#38bdf8', accent:'#7c3aed', success:'#10b981', danger:'#ef4444', idioma:'es', presupuesto:10000000, ticketFormat:'80mm' } };
 let idiomaActual = 'es';
 let calcBuffer = '';
 let supabaseDisponible = true;
@@ -810,7 +815,7 @@ function escapeHTML(value) {
 }
 
 function crearDBSegura(value) {
-  const base = { clientes: [], notas: [], scorings: [], config:{ blur:16, radius:16, modo:'glass', primary:'#581c87', secondary:'#38bdf8', accent:'#7c3aed', success:'#10b981', danger:'#ef4444', idioma:'es', presupuesto:10000000 } };
+  const base = { clientes: [], notas: [], scorings: [], config:{ blur:16, radius:16, modo:'glass', primary:'#581c87', secondary:'#38bdf8', accent:'#7c3aed', success:'#10b981', danger:'#ef4444', idioma:'es', presupuesto:10000000, ticketFormat:'80mm' } };
   if (!value || typeof value !== 'object' || Array.isArray(value)) return base;
   const config = value.config && typeof value.config === 'object' ? value.config : {};
   return {
@@ -1792,17 +1797,55 @@ function registrarAbonoCapital(e) {
 function esPWAStandalone(){
   return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
-function imprimirHTMLEnVentanaActual(contenido, titulo='Comprobante Inverkev', estilos=''){
+const FORMATOS_TICKET={
+  '80mm':{clase:'ticket-format-80mm',ancho:'80mm',margen:'3mm'},
+  '58mm':{clase:'ticket-format-58mm',ancho:'58mm',margen:'2.5mm'},
+  '57mm':{clase:'ticket-format-57mm',ancho:'57mm',margen:'2.5mm'}
+};
+function normalizarFormatoTicket(valor){ return FORMATOS_TICKET[valor] ? valor : '80mm'; }
+function obtenerFormatoTicket(){ return normalizarFormatoTicket(db?.config?.ticketFormat); }
+function aplicarFormatoTicket(guardar=true){
+  const control=document.getElementById('formato-ticket');
+  const formato=normalizarFormatoTicket(control?.value || db?.config?.ticketFormat);
+  if(control) control.value=formato;
+  const info=document.getElementById('formato-ticket-val');
+  if(info) info.textContent=`Los comprobantes nuevos se imprimirán en ${formato}.`;
+  if(guardar){ db.config={...db.config,ticketFormat:formato}; guardarDB(); notificar(`Formato de ticket ${formato} guardado`,'success'); }
+  return formato;
+}
+function sincronizarFormatoTicket(){
+  const formato=normalizarFormatoTicket(db?.config?.ticketFormat);
+  const control=document.getElementById('formato-ticket');
+  if(control) control.value=formato;
+  const info=document.getElementById('formato-ticket-val');
+  if(info) info.textContent=`Los comprobantes nuevos se imprimirán en ${formato}.`;
+  return formato;
+}
+function prepararClaseFormatoTicket(activo){
+  const body=document.body;
+  body.classList.remove('ticket-format-80mm','ticket-format-58mm','ticket-format-57mm','ticket-print-active');
+  if(!activo) return null;
+  const formato=obtenerFormatoTicket();
+  body.classList.add(FORMATOS_TICKET[formato].clase,'ticket-print-active');
+  return FORMATOS_TICKET[formato];
+}
+function cssFormatoTicket(formato){
+  const cfg=FORMATOS_TICKET[normalizarFormatoTicket(formato)];
+  return `@page{size:${cfg.ancho} auto;margin:${cfg.margen}}\n.ticket-print-active .print-document{width:${cfg.ancho}!important;max-width:${cfg.ancho}!important;margin:0!important;padding:${cfg.margen}!important;box-sizing:border-box!important}\n.ticket-print-active{width:${cfg.ancho}!important;max-width:${cfg.ancho}!important}`;
+}
+function imprimirHTMLEnVentanaActual(contenido, titulo='Comprobante Inverkev', estilos='', esTicket=false){
   const area=document.getElementById('ticket-area');
   if(!area){ notificar('No se encontró el área de impresión','error'); return false; }
   const contenidoAnterior=area.innerHTML;
   const tituloAnterior=document.title;
+  const formato=esTicket ? prepararClaseFormatoTicket(true) : prepararClaseFormatoTicket(false);
   const estiloTemporal=document.createElement('style');
   estiloTemporal.dataset.inverkevPrint='true';
-  estiloTemporal.textContent=`@page{size:A4 portrait;margin:12mm}
+  const cssTicket=esTicket ? cssFormatoTicket(obtenerFormatoTicket()) : '@page{size:A4 portrait;margin:12mm}';
+  estiloTemporal.textContent=`${cssTicket}
 html,body{width:100%;max-width:100%;zoom:1!important;-webkit-text-size-adjust:100%;background:#fff!important;color:#000!important}
-body.pwa-print-mode > #ticket-area{width:100%!important;max-width:794px!important;margin:0 auto!important;padding:0!important;transform:none!important;zoom:1!important;font-size:12pt!important;line-height:1.35!important}
-body.pwa-print-mode > #ticket-area .print-document{width:100%!important;max-width:794px!important;margin:0 auto!important;padding:0!important;background:#fff!important;color:#000!important}
+body.pwa-print-mode > #ticket-area{width:${esTicket?formato.ancho:'100%'}!important;max-width:${esTicket?formato.ancho:'794px'}!important;margin:0 auto!important;padding:0!important;transform:none!important;zoom:1!important;font-size:${esTicket?'10pt':'12pt'}!important;line-height:1.35!important}
+body.pwa-print-mode > #ticket-area .print-document{width:${esTicket?formato.ancho:'100%'}!important;max-width:${esTicket?formato.ancho:'794px'}!important;margin:0 auto!important;padding:${esTicket?formato.margen:'0'}!important;box-sizing:border-box!important;background:#fff!important;color:#000!important}
 ${estilos}
 @media print{html,body{background:#fff!important;color:#000!important}body.pwa-print-mode > #ticket-area,body.pwa-print-mode > #ticket-area *{visibility:visible!important;opacity:1!important}}`;
   document.head.appendChild(estiloTemporal);
@@ -1819,44 +1862,32 @@ ${estilos}
     area.innerHTML=contenidoAnterior;
     area.removeAttribute('data-printing');
     document.body.classList.remove('pwa-print-mode');
+    prepararClaseFormatoTicket(false);
     document.title=tituloAnterior;
     estiloTemporal.remove();
     window.removeEventListener('afterprint',limpiar);
   };
   window.addEventListener('afterprint',limpiar,{once:true});
-  // Algunos navegadores Android/PWA no emiten afterprint al cancelar el diálogo.
   temporizadorRestauracion=setTimeout(limpiar,15000);
-  try{
-    window.focus();
-    window.print();
-    return true;
-  }catch(error){
-    limpiar();
-    notificar('No se pudo abrir el diálogo de impresión','error');
-    console.error('Error de impresión PWA:',error);
-    return false;
-  }
+  try{ window.focus(); window.print(); return true; }
+  catch(error){ limpiar(); notificar('No se pudo abrir el diálogo de impresión','error'); console.error('Error de impresión PWA:',error); return false; }
 }
 function imprimirDocumentoBlanco(contenido, titulo='Comprobante Inverkev') {
-  if(esPWAStandalone()) return imprimirHTMLEnVentanaActual(`<main class="print-document">${contenido}</main>`,titulo);
-
-  const ventana = window.open('', '_blank');
-  if(!ventana) { notificar('Permite las ventanas emergentes para imprimir el comprobante', 'error'); return false; }
+  const formato=obtenerFormatoTicket();
+  if(esPWAStandalone()) return imprimirHTMLEnVentanaActual(`<main class="print-document">${contenido}</main>`,titulo,'',true);
+  const ventana=window.open('', '_blank');
+  if(!ventana){ notificar('Permite las ventanas emergentes para imprimir el comprobante','error'); return false; }
+  const cfg=FORMATOS_TICKET[formato];
   ventana.document.open();
-  ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHTML(titulo)}</title><style>
-    @page{size:auto;margin:10mm}
+  ventana.document.write(`<!doctype html><html lang="es" class="ticket-print-active ${cfg.clase}"><head><meta charset="utf-8"><title>${escapeHTML(titulo)}</title><style>
+    @page{size:${cfg.ancho} auto;margin:${cfg.margen}}
     *{box-sizing:border-box}
-    html,body{background:#fff!important;color:#000!important;margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    body{width:100%;min-height:0}
-    .print-document{width:100%;max-width:760px;margin:0 auto;background:#fff;color:#000;padding:12px}
-    @media print{html,body{background:#fff!important;color:#000!important}.print-document{max-width:none;padding:0}}
+    html,body{background:#fff!important;color:#000!important;margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;width:${cfg.ancho};max-width:${cfg.ancho}}
+    body{min-height:0}
+    .print-document{width:${cfg.ancho}!important;max-width:${cfg.ancho}!important;margin:0!important;background:#fff;color:#000;padding:${cfg.margen}!important;box-sizing:border-box}
+    @media print{html,body{background:#fff!important;color:#000!important}.print-document{padding:${cfg.margen}!important}}
   </style></head><body><main class="print-document">${contenido}</main><script>
-    (function(){
-      let cerrado=false;
-      const cerrar=function(){if(cerrado)return;cerrado=true;setTimeout(function(){window.close();},120);};
-      window.addEventListener('afterprint',cerrar,{once:true});
-      window.addEventListener('load',function(){setTimeout(function(){window.focus();window.print();},180);});
-    })();
+    (function(){let cerrado=false;const cerrar=function(){if(cerrado)return;cerrado=true;setTimeout(function(){window.close();},120);};window.addEventListener('afterprint',cerrar,{once:true});window.addEventListener('load',function(){setTimeout(function(){window.focus();window.print();},180);});})();
   <\/script></body></html>`);
   ventana.document.close();
   return true;
@@ -2097,7 +2128,7 @@ function imprimirHistorialCliente(doc) {
     const estilos=documentoTemporal.head.querySelectorAll('style');
     const css=Array.from(estilos).map(estilo=>estilo.textContent||'').join('\n');
     const cuerpo=documentoTemporal.body.innerHTML.replace(/<script[\s\S]*?<\/script>/gi,'');
-    imprimirHTMLEnVentanaActual(cuerpo,`Historial - ${cliente.nombre || 'cliente'}`,css);
+    imprimirHTMLEnVentanaActual(cuerpo,`Historial - ${cliente.nombre || 'cliente'}`,css,false);
     return;
   }
   ventana.document.open();
@@ -2310,6 +2341,7 @@ function sincronizarControlesVisuales(){
   const set=(id,value)=>{const el=document.getElementById(id);if(el)el.value=value;};
   set('estilo-blur',Number(c.blur)||16); set('estilo-radius',Number(c.radius)||16); set('estilo-modo',c.modo||'glass');
   set('color-primary',c.primary); set('color-secondary',c.secondary); set('color-accent',c.accent); set('color-success',c.success); set('color-danger',c.danger);
+  sincronizarFormatoTicket();
   aplicarEstilo(false); aplicarColores(false);
 }
 function aplicarModoVisual(modo){
