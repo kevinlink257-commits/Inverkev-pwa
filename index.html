@@ -114,6 +114,11 @@
    .color-input{width:52px;height:38px;border-radius:9px;border:2px solid var(--glass-border);background:transparent;cursor:pointer;padding:2px;transition:transform .18s,border-color .18s,box-shadow .18s}
    .color-input:hover,.color-input:focus{transform:scale(1.08);border-color:var(--secondary);box-shadow:0 0 0 4px color-mix(in srgb,var(--secondary) 20%,transparent)}
    .color-preview{width:100%;height:8px;border-radius:99px;margin-top:8px;background:linear-gradient(90deg,var(--primary),var(--secondary),var(--accent),var(--success),var(--danger));box-shadow:0 0 18px color-mix(in srgb,var(--secondary) 30%,transparent);transition:background .25s,box-shadow .25s}
+   .thermal-preview-stage{background:#303030;border:1px solid var(--glass-border);border-radius:12px;padding:18px;display:flex;justify-content:center;overflow:auto;max-height:62vh}
+   .thermal-preview-paper{background:#fff;color:#000;box-shadow:0 8px 28px rgba(0,0,0,.45);font-family:Arial,Helvetica,sans-serif;min-height:180px;overflow-wrap:anywhere}
+   .thermal-preview-paper .ticket-preview-note{border-bottom:1px dashed #888;color:#555;font:10px Arial,sans-serif;text-align:center;padding:0 0 7px;margin:0 0 10px}
+   .thermal-preview-paper .print-document{width:100%!important;max-width:none!important}
+
    body.theme-light{--bg:#f4f7fb;--glass-bg:rgba(255,255,255,.82);--glass-border:rgba(15,23,42,.12);--glass-highlight:rgba(15,23,42,.22);--text:#172033;--text-muted:#526078}
    body.theme-ocean{--bg:#061827;--glass-bg:rgba(5,35,56,.72);--glass-border:rgba(56,189,248,.24);--glass-highlight:rgba(56,189,248,.42);--text:#e0f2fe;--text-muted:#93c5fd}
    body.theme-contrast{--bg:#050505;--glass-bg:rgba(0,0,0,.94);--glass-border:rgba(255,255,255,.46);--glass-highlight:#fff;--text:#fff;--text-muted:#e5e7eb}
@@ -740,6 +745,7 @@
    <div class="form-group"><label>Bordes redondeados</label><input type="range" id="estilo-radius" min="8" max="28" value="16" oninput="aplicarEstilo()"><small id="radius-val" style="color:var(--text-muted)">16px</small></div>
    <div class="form-group"><label>Modo de interfaz</label><select id="estilo-modo" onchange="aplicarEstilo()"><option value="glass">Glassmorphism (original)</option><option value="solid">Sólido oscuro</option><option value="minimal">Minimalista</option><option value="light">Claro profesional</option><option value="ocean">Azul oceánico</option><option value="contrast">Alto contraste</option><option value="compact">Compacto</option></select></div>
    <div class="form-group"><label for="formato-ticket">Formato permanente de ticket</label><select id="formato-ticket" onchange="aplicarFormatoTicket()"><option value="80mm">80 mm (recomendado)</option><option value="58mm">58 mm</option><option value="57mm">57 mm</option></select><small id="formato-ticket-val" style="color:var(--text-muted)">Se usará al imprimir comprobantes de abono.</small></div>
+   <button class="btn btn-ghost" type="button" onclick="mostrarPreviewTicketTermico()">👁️ Previsualizar ticket térmico</button>
  </div><div class="modal-footer"><button class="btn btn-ghost" onclick="resetEstilo()">Restablecer</button><button class="btn btn-primary" onclick="closeModal('modal-estilo')">Listo</button></div></div>
 </div>
 
@@ -754,6 +760,17 @@
    <div class="color-row"><div><strong>Éxito</strong><br><small style="color:var(--text-muted)">Verde abonos</small></div><input type="color" id="color-success" class="color-input" value="#10b981" oninput="aplicarColores()"></div>
    <div class="color-row"><div><strong>Peligro</strong><br><small style="color:var(--text-muted)">Rojo mora</small></div><input type="color" id="color-danger" class="color-input" value="#ef4444" oninput="aplicarColores()"></div>
  </div><div class="modal-footer"><button class="btn btn-ghost" onclick="resetColores()">Restablecer originales</button><button class="btn btn-primary" onclick="closeModal('modal-colores')">Guardar</button></div></div>
+</div>
+
+<div class="modal-overlay" id="modal-preview-ticket" onclick="if(event.target===this)closeModal('modal-preview-ticket')">
+ <div class="modal" style="max-width:620px" onclick="event.stopPropagation()">
+  <div class="modal-header"><h3>👁️ Vista previa del ticket</h3><button class="close-x" onclick="closeModal('modal-preview-ticket')">✕</button></div>
+  <div class="modal-body">
+   <p id="thermal-preview-label" style="color:var(--text-muted);font-size:.85rem;margin-bottom:12px"></p>
+   <div class="thermal-preview-stage"><div id="thermal-preview-paper" class="thermal-preview-paper"></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="mostrarPreviewTicketTermico()">↻ Actualizar</button><button class="btn btn-primary" onclick="closeModal('modal-preview-ticket')">Cerrar</button></div>
+ </div>
 </div>
 
 <div class="modal-overlay" id="modal-idioma" onclick="if(event.target===this)closeModal('modal-idioma')">
@@ -786,6 +803,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
 // ===== BASE DE DATOS Y ESTADO =====
 let db = { clientes: [], notas: [], scorings: [], config:{ blur:16, radius:16, modo:'glass', primary:'#581c87', secondary:'#38bdf8', accent:'#7c3aed', success:'#10b981', danger:'#ef4444', idioma:'es', presupuesto:10000000, ticketFormat:'80mm' } };
+let ultimoTicketTermico = { contenido:'', titulo:'' };
 let idiomaActual = 'es';
 let calcBuffer = '';
 let supabaseDisponible = true;
@@ -1811,6 +1829,7 @@ function aplicarFormatoTicket(guardar=true){
   const info=document.getElementById('formato-ticket-val');
   if(info) info.textContent=`Los comprobantes nuevos se imprimirán en ${formato}.`;
   if(guardar){ db.config={...db.config,ticketFormat:formato}; guardarDB(); notificar(`Formato de ticket ${formato} guardado`,'success'); }
+  if(document.getElementById('modal-preview-ticket')?.classList.contains('active')) mostrarPreviewTicketTermico();
   return formato;
 }
 function sincronizarFormatoTicket(){
@@ -1832,6 +1851,29 @@ function prepararClaseFormatoTicket(activo){
 function cssFormatoTicket(formato){
   const cfg=FORMATOS_TICKET[normalizarFormatoTicket(formato)];
   return `@page{size:${cfg.ancho} auto;margin:${cfg.margen}}\n.ticket-print-active .print-document{width:${cfg.ancho}!important;max-width:${cfg.ancho}!important;margin:0!important;padding:${cfg.margen}!important;box-sizing:border-box!important}\n.ticket-print-active{width:${cfg.ancho}!important;max-width:${cfg.ancho}!important}`;
+}
+function contenidoTicketDemo(){
+  return `<div style="font-family:monospace;max-width:360px;margin:0 auto;color:#000;background:#fff;padding:15px;font-size:12px">
+    <div style="text-align:center;font-weight:bold;font-size:16px;margin-bottom:4px">INVERKEV S.A.S.</div>
+    <div style="text-align:center;font-size:10px;margin-bottom:10px">Vista previa térmica</div>
+    <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;margin-bottom:8px"><div><strong>Cliente:</strong> Cliente de prueba</div><div><strong>Ticket:</strong> DEMO-0001</div><div><strong>Total:</strong> $100.000</div><div><strong>Saldo:</strong> $50.000</div></div>
+    <div style="text-align:center;font-size:10px;margin-top:12px">Este ejemplo no se enviará a la impresora.</div>
+  </div>`;
+}
+function mostrarPreviewTicketTermico(){
+  const paper=document.getElementById('thermal-preview-paper');
+  const label=document.getElementById('thermal-preview-label');
+  if(!paper) return;
+  const formato=obtenerFormatoTicket();
+  const cfg=FORMATOS_TICKET[formato];
+  const contenido=ultimoTicketTermico.contenido || contenidoTicketDemo();
+  const nota=ultimoTicketTermico.contenido ? `<div class="ticket-preview-note">${escapeHTML(ultimoTicketTermico.titulo || 'Último comprobante generado')} · ${formato}</div>` : `<div class="ticket-preview-note">Ejemplo de ticket · ${formato}</div>`;
+  paper.style.width=cfg.ancho;
+  paper.style.maxWidth=cfg.ancho;
+  paper.style.padding=cfg.margen;
+  paper.innerHTML=nota+contenido;
+  if(label) label.textContent=ultimoTicketTermico.contenido ? `Vista previa del último comprobante en ${formato}. Puedes cambiar el formato y actualizarla antes de imprimir.` : `Vista previa de ejemplo en ${formato}. Al generar un abono se mostrará aquí el comprobante real.`;
+  openModal('modal-preview-ticket');
 }
 function imprimirHTMLEnVentanaActual(contenido, titulo='Comprobante Inverkev', estilos='', esTicket=false){
   const area=document.getElementById('ticket-area');
@@ -1873,6 +1915,7 @@ ${estilos}
   catch(error){ limpiar(); notificar('No se pudo abrir el diálogo de impresión','error'); console.error('Error de impresión PWA:',error); return false; }
 }
 function imprimirDocumentoBlanco(contenido, titulo='Comprobante Inverkev') {
+  ultimoTicketTermico={contenido,titulo};
   const formato=obtenerFormatoTicket();
   if(esPWAStandalone()) return imprimirHTMLEnVentanaActual(`<main class="print-document">${contenido}</main>`,titulo,'',true);
   const ventana=window.open('', '_blank');
